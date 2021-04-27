@@ -39,7 +39,7 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 	Bucket tailBucket;
 
-	volatile boolean noMoreBuckets;
+	volatile boolean noMoreBuckets;  // volatile only for sanity check in addBucket() below
 
 
 
@@ -106,12 +106,12 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 		/**
 		 * Marks this bucket as closed. The marking is synchronized on this bucket.<br/>
-		 * If this was the head bucket (the first unclosed one), then flushes all buffered messages
-		 * from subsequent buckets that can be sent now. Specifically, a continuous chain of
-		 * subsequent closed buckets and the first unclosed one will be flushed. Each flushing is
-		 * synchronized on the given bucket.<br/>
-		 * The first unclosed bucket becomes the new head: its messages will be written directly to
-		 * the underlying output stream.<br/>
+		 * If this is the head bucket (the first unclosed one), then all buffered messages from
+		 * subsequent buckets that can be sent now, will be flushed. Specifically, a continuous
+		 * chain of subsequent closed buckets and the first unclosed one will be flushed. Flushing
+		 * is synchronized on the whole buffer and the given bucket.<br/>
+		 * The first unclosed bucket will become the new head: its messages will be written directly
+		 * to the underlying output stream.<br/>
 		 * If all buckets until the last one (indicated by {@link #signalNoMoreBuckets()}) are
 		 * flushed, then the underlying output stream will be closed.<br/>
 		 * This method is not idempotent.
@@ -122,48 +122,32 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 			synchronized (this) {
 				if (closed) throw new IllegalStateException(ALREADY_CLOSED_MESSAGE);
 				closed = true;
-				if (buffer != null) return;
 			}
 
-			Bucket headBucket = next;
-			do {
+			synchronized (OrderedConcurrentOutputBuffer.this) {
+				if (buffer != null) return;
+
+				Bucket headBucket = next;
+
+				if (headBucket != null && headBucket.buffer == null) {
+					// some previous bucket thread has already done all the below work while this
+					// thread was waiting for OrderedConcurrentOutputBuffer's monitor
+					return;
+				}
+
 				// flush all closed buckets from the beginning of the queue
 				while (headBucket != null && headBucket.closed) {
 					headBucket.flush();
 					headBucket = headBucket.next;
 				}
 
-				// flush the buffered beginning of the new unclosed headBucket (if any)
 				if (headBucket != null) {
-
-					// if another thread closes headBucket at this moment, it will not flush
-					// subsequent closed buckets, hence the outer do-while loop
-
-					synchronized (headBucket) {
-						headBucket.flush();  // safe race with addBucket(), see above
-						if ( ! headBucket.closed) {
-							// if another thread closes headBucket right after this synchronized
-							// block, it will start flushing subsequent closed buckets, while this
-							// thread would do another turn of the outer do-while loop, also trying
-							// to flush the same buckets. Hence break to prevent this race.
-							break;
-						}
-					}
-
-					// headBucket is closed & flushed, but subsequent buckets are not flushed, so
-					// 1 more turn of the outer do-while loop will be performed
+					// flush the buffered beginning of the new unclosed headBucket
+					headBucket.flush();  // safe race with addBucket(), see above
+				} else if (noMoreBuckets && outputClosed.compareAndSet(false, true)) {
+					// all buckets flushed and no more coming
+					output.close();
 				}
-			} while (headBucket != null && headBucket.closed);
-
-			// if a bucket was added and noMoreBuckets was signaled both right before the below
-			// check, headBucket is stale, so check tailBucket also
-			if (
-				headBucket == null && noMoreBuckets
-				&& tailBucket.closed && tailBucket.buffer == null
-				&& outputClosed.compareAndSet(false, true)
-			) {
-				// all buckets flushed and no more coming
-				output.close();
 			}
 		}
 
@@ -184,15 +168,13 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 	/**
 	 * Indicates that no more new buckets will be added. If all buckets are already flushed, then
-	 * the underlying stream will be closed.
+	 * the underlying stream will be closed. Synchronized.
 	 */
-	public void signalNoMoreBuckets() {
-		synchronized (tailBucket) {
-			noMoreBuckets = true;
-			if (tailBucket.closed && tailBucket.buffer == null
-					&& outputClosed.compareAndSet(false, true)) {
-				output.close();
-			}
+	public synchronized void signalNoMoreBuckets() {
+		noMoreBuckets = true;
+		if (tailBucket.closed && tailBucket.buffer == null
+				&& outputClosed.compareAndSet(false, true)) {
+			output.close();
 		}
 	}
 
