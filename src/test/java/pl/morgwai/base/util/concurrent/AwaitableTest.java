@@ -1,5 +1,5 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.concurrent;
+package pl.morgwai.base.util.concurrent;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -8,7 +8,7 @@ import java.util.stream.IntStream;
 
 import com.google.common.collect.Comparators;
 import org.junit.Test;
-import pl.morgwai.base.concurrent.Awaitable.AwaitInterruptedException;
+import pl.morgwai.base.util.concurrent.Awaitable.AwaitInterruptedException;
 
 import static org.junit.Assert.*;
 

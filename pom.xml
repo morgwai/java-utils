@@ -6,7 +6,7 @@
 
 	<groupId>pl.morgwai.base</groupId>
 	<artifactId>java-utils</artifactId>
-	<version>1.17-SNAPSHOT</version>
+	<version>2.0-SNAPSHOT</version>
 
 	<name>Java utils</name>
 	<description>Some utility classes</description>
@@ -29,7 +29,7 @@
 			<id>morgwai</id>
 			<name>Piotr Morgwai Kotarbinski</name>
 			<email>foss@morgwai.pl</email>
-			<url>http://morgwai.pl/</url>
+			<url>https://morgwai.pl/</url>
 		</developer>
 	</developers>
 
@@ -137,14 +137,6 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<configuration>
-					<!-- TODO: ideally this should be set only for JulManualResetLogManagerTest -->
-					<argLine>-Djava.util.logging.manager=pl.morgwai.base.logging.JulManualResetLogManager</argLine>
-				</configuration>
 			</plugin>
 		</plugins>
 	</build>

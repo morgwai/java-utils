@@ -1,11 +1,12 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.concurrent;
+package pl.morgwai.base.util.concurrent;
 
 import java.util.concurrent.*;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 
 

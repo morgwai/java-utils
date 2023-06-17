@@ -2,4 +2,4 @@
 /**
  * Multithreading utilities.
  */
-package pl.morgwai.base.concurrent;
+package pl.morgwai.base.util.concurrent;

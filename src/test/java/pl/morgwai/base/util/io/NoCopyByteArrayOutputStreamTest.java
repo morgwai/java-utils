@@ -1,11 +1,12 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.util;
+package pl.morgwai.base.util.io;
 
 import java.io.IOException;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 
 
@@ -17,7 +18,7 @@ public class NoCopyByteArrayOutputStreamTest {
 
 		VerifyingStream() {}
 
-		boolean getBufferReturnsUnderlyingBufferReferance() {
+		boolean getBufferReturnsUnderlyingBufferReference() {
 			return buf == getBuffer();
 		}
 	}
@@ -37,10 +38,10 @@ public class NoCopyByteArrayOutputStreamTest {
 
 
 	@Test
-	public void testGetBufferReturnsUnderlyingBufferReferance() {
+	public void testGetBufferReturnsUnderlyingBufferReference() {
 		stream.close();
 		assertTrue("getBuffer() should return reference to the underlying buffer",
-				stream.getBufferReturnsUnderlyingBufferReferance());
+				stream.getBufferReturnsUnderlyingBufferReference());
 	}
 
 

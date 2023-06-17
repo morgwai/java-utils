@@ -1,5 +1,5 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.concurrent;
+package pl.morgwai.base.util.concurrent;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -7,7 +7,7 @@ import java.util.logging.*;
 
 import com.google.common.collect.Comparators;
 import org.junit.*;
-import pl.morgwai.base.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
+import pl.morgwai.base.util.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
 
 import static org.junit.Assert.*;
 

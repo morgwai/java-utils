@@ -1,5 +1,5 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.concurrent;
+package pl.morgwai.base.util.concurrent;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -231,14 +231,6 @@ public interface Awaitable {
 	}
 
 	static <T> Entry<T> newEntry(T object, Awaitable operation) {
-		return new Entry<>(object, operation);
-	}
-
-	/**
-	 * @deprecated use {@link #newEntry(Object, Awaitable)} instead.
-	 */
-	@Deprecated(forRemoval = true)
-	static <T> Entry<T> entry(T object, Awaitable operation) {
 		return new Entry<>(object, operation);
 	}
 

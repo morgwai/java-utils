@@ -1,5 +1,5 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.concurrent;
+package pl.morgwai.base.util.concurrent;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -48,9 +48,11 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 	final OutputStream<MessageT> output;
 
-	// A buffer always has a preallocated guard bucket at the tail of the queue. As addBucket() is
-	// synchronized on the tail, having a guard prevents addBucket() to be delayed if the last
-	// bucket handed out has a huge number of buffered messages and is just being flushed.
+	/**
+	 * A buffer always has a preallocated guard bucket at the tail of the queue. As addBucket() is
+	 * synchronized on the tail, having a guard prevents addBucket() to be delayed if the last
+	 * bucket handed out has a huge number of buffered messages and is just being flushed.
+	 */
 	Bucket tailGuard;
 
 	boolean noMoreBuckets = false;  // See signalNoMoreBuckets().
@@ -79,11 +81,10 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 		// tailGuard at the same time.
 		synchronized (tailGuard.lock) {
 			if (noMoreBuckets) {
-				throw new IllegalStateException("noMoreBuckets has been already signaled");
+				throw new IllegalStateException("noMoreBuckets already signaled");
 			}
 
-			// return the current tailGuard after adding a new one after it and
-			// updating the pointer
+			// return the current tailGuard after adding a new one after it and updating the pointer
 			Bucket result = tailGuard;
 			tailGuard.next = new Bucket();
 			tailGuard = tailGuard.next;
@@ -108,23 +109,31 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 
-	// A list of messages that will have a well defined position relatively to other buckets within
-	// the output stream. All methods are thread-safe.
+	/**
+	 * A list of messages that will have a well defined position relatively to other buckets within
+	 * the output stream. All methods are thread-safe.
+	 */
 	class Bucket implements OutputStream<MessageT> {
 
-		final Object lock = new Object();  // all bucket methods are synchronized on this lock
+		/** all bucket methods are synchronized on this lock */
+		final Object lock = new Object();
 
-		List<MessageT> buffer = new LinkedList<>();// null <=> flushed <=> all previous also flushed
+		/** null <=> flushed <=> all previous also flushed */
+		List<MessageT> buffer = new LinkedList<>();
 		boolean closed = false;
-		Bucket next;  // null <=> this is the tailGuard
+		/** null <=> this is the tailGuard */
+		Bucket next;
+
 		// (buffer == null && !closed) <=> this is the current head bucket (first unclosed one)
 
 
 
-		// Appends message to the end of this bucket.
-		// If this is the head bucket (first unclosed one), then the message will be written
-		// directly to the output stream. Otherwise it will be buffered in this bucket until all the
-		// previous buckets are closed and flushed.
+		/**
+		 * Appends message to the end of this bucket.
+		 * If this is the head bucket (first unclosed one), then the message will be written
+		 * directly to the output stream. Otherwise it will be buffered in this bucket until all the
+		 * previous buckets are closed and flushed.
+		 */
 		@Override
 		public void write(MessageT message) {
 			synchronized (lock) {
@@ -139,15 +148,17 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 
-		// Marks this bucket as closed.
-		// If this is the head bucket (the first unclosed one), then flushes all buffered messages
-		// from the subsequent buckets that can be sent now. Specifically, a continuous chain of
-		// subsequent closed buckets and the first unclosed one will be flushed.
-		// Each flushing is synchronized on the given bucket.
-		// The first unclosed bucket becomes the new head: its messages will be written directly to
-		// the underlying output stream from now on.
-		// If all buckets are closed & flushed and signalNoMoreBuckets() has already been called,
-		// then the underlying output stream will be closed.
+		/**
+		 * Marks this bucket as closed.
+		 * If this is the head bucket (the first unclosed one), then flushes all buffered messages
+		 * from the subsequent buckets that can be sent now. Specifically, a continuous chain of
+		 * subsequent closed buckets and the first unclosed one will be flushed.
+		 * Each flushing is synchronized on the given bucket.
+		 * The first unclosed bucket becomes the new head: its messages will be written directly to
+		 * the underlying output stream from now on.
+		 * If all buckets are closed & flushed and signalNoMoreBuckets() has already been called,
+		 * then the underlying output stream will be closed.
+		 */
 		@Override
 		public void close() {
 			synchronized (lock) {
@@ -160,9 +171,11 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 
-		// Flushes this bucket and if it is already closed, then recursively flushes the next one.
-		// If there is no next one (meaning this is tailGuard) and signalNoMoreBuckets() has been
-		// already called, then the underlying output stream will be closed.
+		/**
+		 * Flushes this bucket and if it is already closed, then recursively flushes the next one.
+		 * If there is no next one (meaning this is tailGuard) and signalNoMoreBuckets() has been
+		 * already called, then the underlying output stream will be closed.
+		 */
 		private void flush() {
 			synchronized (lock) {
 				for (MessageT bufferedMessage: buffer) output.write(bufferedMessage);
