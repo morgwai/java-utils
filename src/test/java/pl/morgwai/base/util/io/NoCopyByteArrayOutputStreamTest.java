@@ -15,9 +15,7 @@ public class NoCopyByteArrayOutputStreamTest {
 
 
 	static class VerifyingStream extends NoCopyByteArrayOutputStream {
-
-		VerifyingStream() {}
-
+		VerifyingStream() { super(32); }
 		boolean getBufferReturnsUnderlyingBufferReference() {
 			return buf == getBuffer();
 		}

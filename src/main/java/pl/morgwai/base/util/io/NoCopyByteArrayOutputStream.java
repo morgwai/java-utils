@@ -13,8 +13,13 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 
 
 
-	public NoCopyByteArrayOutputStream() {}
-
+	/**
+	 * Constructs a new stream.
+	 * @param initialBufferSize initial size of the underlying buffer. This should be a reasonably
+	 * accurate estimate of the size of the whole data that will be written. If this value is
+	 * heavily underestimated, it will have significant performance consequences due to repeated
+	 * buffer extending.
+	 */
 	public NoCopyByteArrayOutputStream(int initialBufferSize) {
 		super(initialBufferSize);
 	}
