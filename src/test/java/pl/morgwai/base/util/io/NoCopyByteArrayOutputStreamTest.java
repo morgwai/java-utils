@@ -5,8 +5,7 @@ import java.io.IOException;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 
 
@@ -15,9 +14,14 @@ public class NoCopyByteArrayOutputStreamTest {
 
 
 	static class VerifyingStream extends NoCopyByteArrayOutputStream {
+
+		byte[] bufferReference;
+
 		VerifyingStream() { super(32); }
-		boolean getBufferReturnsUnderlyingBufferReference() {
-			return buf == getBuffer();
+
+		@Override public void close() {
+			bufferReference = buf;
+			super.close();
 		}
 	}
 
@@ -38,8 +42,8 @@ public class NoCopyByteArrayOutputStreamTest {
 	@Test
 	public void testGetBufferReturnsUnderlyingBufferReference() {
 		stream.close();
-		assertTrue("getBuffer() should return reference to the underlying buffer",
-				stream.getBufferReturnsUnderlyingBufferReference());
+		assertSame("getBuffer() should return reference to the underlying buffer",
+				stream.bufferReference, stream.getBuffer());
 	}
 
 
@@ -56,6 +60,17 @@ public class NoCopyByteArrayOutputStreamTest {
 
 
 	@Test
+	public void testWriteBufferThrowsNPEIfBufferIsNull() throws IOException {
+		stream.close();
+		try {
+			stream.write(null);
+			fail("NPE expected");
+		} catch (NullPointerException expected) {}
+	}
+
+
+
+	@Test
 	public void testWriteBufferThrowsIfStreamClosed() throws IOException {
 		stream.close();
 		try {
@@ -67,12 +82,34 @@ public class NoCopyByteArrayOutputStreamTest {
 
 
 	@Test
+	public void testWriteBufferWithOffsetThrowsNPEIfBufferIsNull() {
+		stream.close();
+		try {
+			stream.write(null, 1, 1);
+			fail("NPE expected");
+		} catch (NullPointerException expected) {}
+	}
+
+
+
+	@Test
 	public void testWriteBufferWithOffsetThrowsIfStreamClosed() {
 		stream.close();
 		try {
 			stream.write(new byte[5], 1, 1);
 			fail("IllegalStateException expected");
 		} catch (IllegalStateException expected) {}
+	}
+
+
+
+	@Test
+	public void testWriteBytesThrowsNPEIfBytesAreNull() {
+		stream.close();
+		try {
+			stream.writeBytes(null);
+			fail("NPE expected");
+		} catch (NullPointerException expected) {}
 	}
 
 

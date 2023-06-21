@@ -27,15 +27,21 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 
 
 	/**
+	 * Reference to the underlying buffer initialized in {@link #close()}.
+	 */
+	byte[] closedBuffer = null;
+
+
+
+	/**
 	 * Marks this stream as closed. After this method is called no further writes are allowed and
 	 * access to {@link #getBuffer() the underlying buffer} is granted.
 	 */
 	@Override
 	public void close() {
-		closed = true;
+		closedBuffer = buf;
+		buf = null;
 	}
-
-	boolean closed = false;
 
 
 
@@ -48,8 +54,8 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 	 * @throws IllegalStateException if this stream has not been closed yet.
 	 */
 	public byte[] getBuffer() {
-		if ( !closed) throw new IllegalStateException("stream not closed yet");
-		return buf;
+		if (closedBuffer == null) throw new IllegalStateException("stream not closed yet");
+		return closedBuffer;
 	}
 
 
@@ -59,8 +65,11 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 	 * @throws IllegalStateException if this stream has already been closed.
 	 */
 	public void write(int b) {
-		if (closed) throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
-		super.write(b);
+		try {
+			super.write(b);
+		} catch (NullPointerException e) {
+			throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
+		}
 	}
 
 	/**
@@ -68,8 +77,12 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 	 * @throws IllegalStateException if this stream has already been closed.
 	 */
 	public void write(byte[] bytes, int offset, int len) {
-		if (closed) throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
-		super.write(bytes, offset, len);
+		try {
+			super.write(bytes, offset, len);
+		} catch (NullPointerException e) {
+			if (bytes == null) throw e;
+			throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
+		}
 	}
 
 	/**
@@ -77,7 +90,7 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 	 * @throws IllegalStateException if this stream has already been closed.
 	 */
 	public void reset() {
-		if (closed) throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
+		if (buf == null) throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
 		super.reset();
 	}
 
