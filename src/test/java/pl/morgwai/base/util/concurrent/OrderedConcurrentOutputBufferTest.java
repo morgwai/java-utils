@@ -278,6 +278,18 @@ public class OrderedConcurrentOutputBufferTest {
 
 
 	@Test
+	public void testDoubleCloseBucket() {
+		OutputStream<Message> bucket = buffer.addBucket();
+		bucket.close();
+		try {
+			bucket.close();
+			fail("closing a closed bucket should throw an IllegalStateException");
+		} catch (IllegalStateException ignored) {}
+	}
+
+
+
+	@Test
 	public void testAddBucketAfterLastBucketSignaled() {
 		buffer.addBucket();
 		buffer.signalNoMoreBuckets();
