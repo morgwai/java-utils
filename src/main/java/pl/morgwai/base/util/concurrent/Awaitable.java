@@ -4,6 +4,7 @@ package pl.morgwai.base.util.concurrent;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 
@@ -87,6 +88,40 @@ public interface Awaitable {
 				thread.join(timeoutMillis, (int) (unit.toNanos(timeout) % 1_000_000L));
 			}
 			return !thread.isAlive();
+		};
+	}
+
+
+
+	/**
+	 * Creates an {@link Awaitable.WithUnit} of {@link Object#wait(long, int) waiting for a monitor
+	 * condition}. The returned {@link Awaitable} acquires {@code monitor}'s lock before performing
+	 * the wait and is <b>not</b> affected by <i>spurious wakeup</i>, ie: it performs waiting in
+	 * a loop until either {@code condition} becomes {@code true} or an {@link InterruptedException}
+	 * is thrown or the timeout is exceeded (unless {@code 0} was passed). If {@code 0} was passed
+	 * as {@code timeout}, the loop will only exit if {@code condition} becomes {@code true} or an
+	 * {@link InterruptedException} is thrown, similarly to the semantics of
+	 * {@link Object#wait(long, int) wait(0L, 0)} (note that non of the
+	 * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} methods will ever pass {@code 0} to
+	 * any of its operations as a result of time passing, only if {@code 0} was originally passed as
+	 * {@code timeout}).
+	 */
+	static Awaitable.WithUnit ofMonitorCondition(Object monitor, BooleanSupplier condition) {
+		return (timeout, unit) -> {
+			final var deadlineNanos = System.nanoTime() + unit.toNanos(timeout);
+			synchronized (monitor) {
+				while ( !condition.getAsBoolean()) {
+					if (timeout == 0L) {
+						monitor.wait();
+					} else {
+						final var remainingNanos = deadlineNanos - System.nanoTime();
+						if (remainingNanos <= 0L) return false;
+						monitor.wait(
+							remainingNanos / 1_000_000L, (int)(remainingNanos % 1_000_000L));
+					}
+				}
+				return true;
+			}
 		};
 	}
 
