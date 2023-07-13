@@ -26,9 +26,7 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 
 
 
-	/**
-	 * Reference to the underlying buffer initialized in {@link #close()}.
-	 */
+	/** Reference to the underlying buffer initialized in {@link #close()}. */
 	byte[] closedBuffer = null;
 
 
