@@ -271,7 +271,7 @@ public class OrderedConcurrentOutputBufferTest {
 		bucket.close();
 		try {
 			bucket.write(new Message(666, 666));
-			fail("IllegalStateException should be thrown");
+			fail("writing to a closed bucket should throw an IllegalStateException");
 		} catch (IllegalStateException ignored) {}
 	}
 
@@ -283,7 +283,7 @@ public class OrderedConcurrentOutputBufferTest {
 		buffer.signalNoMoreBuckets();
 		try {
 			buffer.addBucket();
-			fail("IllegalStateException should be thrown");
+			fail("adding a bucket after signaling no more should throw an IllegalStateException");
 		} catch (IllegalStateException ignored) {}
 	}
 

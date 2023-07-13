@@ -16,7 +16,7 @@ public class ConcurrentUtilsTest {
 
 	@Test
 	public void testCompletableFutureSupplyAsync() throws InterruptedException {
-		final var thrown = new Exception();
+		final var thrown = new Exception("thrown");
 		final Throwable[] caughtHolder = new Throwable[1];
 		final var completionLatch = new CountDownLatch(1);
 

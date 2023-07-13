@@ -27,6 +27,8 @@ public class AwaitableTest {
 	 */
 	final long MAX_INACCURACY_MILLIS = 2L;
 
+	AssertionError asyncError;
+
 
 
 	@Test
@@ -66,26 +68,26 @@ public class AwaitableTest {
 			TimeUnit.MILLISECONDS,
 			(timeout, unit) -> {
 				assertEquals("1st task should get the full timeout",
-						TOTAL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS.convert(timeout, unit));
+						TOTAL_TIMEOUT_MILLIS, unit.toMillis(timeout));
 				Thread.sleep(FIRST_TASK_DURATION_MILLIS);
 				return true;
 			},
 			(timeout, unit) -> {
-				final var adjustedTimeoutMillis = TimeUnit.MILLISECONDS.convert(timeout, unit);
+				final var timeoutMillis = unit.toMillis(timeout);
 				assertTrue("timeouts of subsequent tasks should be correctly adjusted",
-						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_DURATION_MILLIS >= adjustedTimeoutMillis);
+						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_DURATION_MILLIS >= timeoutMillis);
 				assertTrue(
-						"timeout adjustment accuracy should be below " + MAX_INACCURACY_MILLIS
+						"timeout adjustment inaccuracy should be below " + MAX_INACCURACY_MILLIS
 								+ "ms (this may fail if another process was using much CPU or if"
 								+ " the VM was warming up, so try again)",
-						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_DURATION_MILLIS - adjustedTimeoutMillis
+						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_DURATION_MILLIS - timeoutMillis
 								<= MAX_INACCURACY_MILLIS);
-				Thread.sleep(TimeUnit.MILLISECONDS.convert(timeout, unit) + MAX_INACCURACY_MILLIS);
+				Thread.sleep(unit.toMillis(timeout) + MAX_INACCURACY_MILLIS);
 				return true;
 			},
 			(timeout, unit) -> {
 				assertEquals("after timeout has been exceeded subsequent task should get 1ns",
-						1L, TimeUnit.NANOSECONDS.convert(timeout, unit));
+						1L, unit.toNanos(timeout));
 				return true;
 			}
 		));
@@ -104,10 +106,6 @@ public class AwaitableTest {
 			(timeout) -> {
 				assertEquals("there should be no timeout", 0L, timeout);
 				return true;
-			},
-			(timeout) -> {
-				assertEquals("there should be no timeout", 0L, timeout);
-				return true;
 			}
 		);
 		assertTrue("all tasks should be marked as completed", allCompleted);
@@ -116,66 +114,75 @@ public class AwaitableTest {
 
 
 	public void testInterruptAndContinue(boolean zeroTimeout) throws InterruptedException {
-		final long combinedTimeout = zeroTimeout ? 0L : 100L;
-		final AssertionError[] errorHolder = {null};
+		final long totalTimeoutMillis = zeroTimeout ? 0L : 100L;
 		final boolean[] taskExecuted = {false, false, false, false};
-		final var awaitingThread = new Thread(
-			() -> {
+		final var awaitingThread = new Thread(() -> {
+			try {
 				try {
-					try {
-						Awaitable.awaitMultiple(
-							combinedTimeout,
-							TimeUnit.MILLISECONDS,
-							Awaitable.newEntry(0, (timeoutMillis) -> {
+					Awaitable.awaitMultiple(
+						totalTimeoutMillis,
+						TimeUnit.MILLISECONDS,
+						Awaitable.newEntry(
+							0,
+							(timeoutMillis) -> {
 								taskExecuted[0] = true;
 								assertEquals("task-0 should get the full timeout",
-										combinedTimeout, timeoutMillis);
+										totalTimeoutMillis, timeoutMillis);
 								return true;
-							}),
-							Awaitable.newEntry(1, (timeoutMillis) -> {
+							}
+						),
+						Awaitable.newEntry(
+							1,
+							(timeoutMillis) -> {
 								taskExecuted[1] = true;
 								Thread.sleep(100L);
 								fail("InterruptedException should be thrown");
 								return true;
-							}),
-							Awaitable.newEntry(2, (timeoutMillis) -> {
+							}
+						),
+						Awaitable.newEntry(
+							2,
+							(timeoutMillis) -> {
 								taskExecuted[2] = true;
 								assertEquals("after an interrupt tasks should get 1ms timeout",
 										1L, timeoutMillis);
 								return true;
-							}),
-							Awaitable.newEntry(3, (timeoutMillis) -> {
+							}
+						),
+						Awaitable.newEntry(
+							3,
+							(timeoutMillis) -> {
 								taskExecuted[3] = true;
 								assertEquals("after an interrupt tasks should get 1ms timeout",
 										1L, timeoutMillis);
 								return false;
-							})
-						);
-						fail("InterruptedException should be thrown");
-					} catch (AwaitInterruptedException e) {
-						final var failed = e.getFailed();
-						final var interrupted = e.getInterrupted();
-						assertEquals("1 task should fail", 1, failed.size());
-						assertEquals("1 task should be interrupted", 1, interrupted.size());
-						assertFalse("all tasks should be executed", e.getUnexecuted().hasNext());
-						assertEquals("task-1 should be interrupted", 1, interrupted.get(0));
-						assertEquals("task-3 should fail", 3, failed.get(0));
-					}
-					for (int i = 0; i < taskExecuted.length; i++) {
-						assertTrue("task-" + i + " should be executed", taskExecuted[i]);
-					}
-				} catch (AssertionError e) {
-					errorHolder[0] = e;
+							}
+						)
+					);
+					fail("InterruptedException should be thrown");
+				} catch (AwaitInterruptedException e) {
+					final var failed = e.getFailed();
+					final var interrupted = e.getInterrupted();
+					assertEquals("1 task should fail", 1, failed.size());
+					assertEquals("1 task should be interrupted", 1, interrupted.size());
+					assertFalse("all tasks should be executed", e.getUnexecuted().hasNext());
+					assertEquals("task-1 should be interrupted", 1, interrupted.get(0));
+					assertEquals("task-3 should fail", 3, failed.get(0));
 				}
+				for (int i = 0; i < taskExecuted.length; i++) {
+					assertTrue("task-" + i + " should be executed", taskExecuted[i]);
+				}
+			} catch (AssertionError e) {
+				asyncError = e;
 			}
-		);
+		});
 
 		awaitingThread.start();
 		Thread.sleep(5L);
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
 		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
-		if (errorHolder[0] != null)  throw errorHolder[0];
+		if (asyncError != null)  throw asyncError;
 	}
 
 	@Test
@@ -193,7 +200,6 @@ public class AwaitableTest {
 	@Test
 	public void testInterruptAndAbort() throws InterruptedException {
 		final long TOTAL_TIMEOUT_MILLIS = 100L;
-		final AssertionError[] errorHolder = {null};
 		final boolean[] taskExecuted = {false, false, false};
 		final Awaitable.WithUnit[] tasks = {
 			(timeout, unit) -> {
@@ -214,48 +220,42 @@ public class AwaitableTest {
 				return true;
 			}
 		};
-		final var awaitingThread = new Thread(
-			() -> {
+		final var awaitingThread = new Thread(() -> {
+			try {
 				try {
-					try {
-						Awaitable.awaitMultiple(
-								TOTAL_TIMEOUT_MILLIS,
-								false,
-								(i) -> tasks[i],
-								IntStream.range(0, tasks.length).boxed()
-										.collect(Collectors.toList()));
-						fail("InterruptedException should be thrown");
-					} catch (AwaitInterruptedException e) {
-						final var interrupted = e.getInterrupted();
-						final var unexecuted = e.getUnexecuted();
-						assertTrue("no task should fail", e.getFailed().isEmpty());
-						assertEquals("1 task should be interrupted", 1, interrupted.size());
-						assertEquals("task-1 should be interrupted", 1, interrupted.get(0));
-						assertTrue("not all tasks should be executed",
-								e.getUnexecuted().hasNext());
-						assertEquals("task-2 should not be executed", 2,
-								unexecuted.next().getObject());
-						assertFalse("only 1 task should not be executed",
-								e.getUnexecuted().hasNext());
-
-						for (int i = 0; i < taskExecuted.length - 1; i++) {
-							assertTrue("task-" + i + " should be executed", taskExecuted[i]);
-						}
-						assertFalse("the last task should NOT be executed",
-								taskExecuted[taskExecuted.length - 1]);
+					Awaitable.awaitMultiple(
+						TOTAL_TIMEOUT_MILLIS,
+						false,
+						(i) -> tasks[i],
+						IntStream.range(0, tasks.length).boxed().collect(Collectors.toList())
+					);
+					fail("InterruptedException should be thrown");
+				} catch (AwaitInterruptedException e) {
+					final var interrupted = e.getInterrupted();
+					final var unexecuted = e.getUnexecuted();
+					assertTrue("no task should fail", e.getFailed().isEmpty());
+					assertEquals("1 task should be interrupted", 1, interrupted.size());
+					assertEquals("task-1 should be interrupted", 1, interrupted.get(0));
+					assertTrue("not all tasks should be executed", e.getUnexecuted().hasNext());
+					assertEquals("task-2 should not be executed", 2, unexecuted.next().getObject());
+					assertFalse("only 1 task should not be executed", e.getUnexecuted().hasNext());
+					for (int i = 0; i < taskExecuted.length - 1; i++) {
+						assertTrue("task-" + i + " should be executed", taskExecuted[i]);
 					}
-				} catch (AssertionError e) {
-					errorHolder[0] = e;
+					assertFalse("the last task should NOT be executed",
+							taskExecuted[taskExecuted.length - 1]);
 				}
+			} catch (AssertionError e) {
+				asyncError = e;
 			}
-		);
+		});
 
 		awaitingThread.start();
 		Thread.sleep(5L);
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
 		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
-		if (errorHolder[0] != null)  throw errorHolder[0];
+		if (asyncError != null)  throw asyncError;
 	}
 
 
@@ -279,8 +279,9 @@ public class AwaitableTest {
 		assertTrue("executor should be shutdown", executor.isShutdown());
 		assertFalse("termination should fail before latch is lowered", executor.isTerminated());
 		latch.countDown();
-		assertTrue("termination should succeed after latch is lowered", termination.await(20L));
-		assertTrue("termination should succeed after latch is lowered", executor.isTerminated());
+		assertTrue("awaiting termination should succeed after latch is lowered",
+				termination.await(20L));
+		assertTrue("executor should terminate after latch is lowered", executor.isTerminated());
 	}
 
 
@@ -304,8 +305,8 @@ public class AwaitableTest {
 		final var enforcedTermination = Awaitable.ofEnforcedTermination(executor);
 		assertFalse("executor should not be shutdown until termination is being awaited",
 				executor.isShutdown());
-		assertFalse("termination should fail", enforcedTermination.await(20L));
-		assertFalse("termination should fail", executor.isTerminated());
+		assertFalse("awaiting termination should fail", enforcedTermination.await(20L));
+		assertFalse("executor should not terminate", executor.isTerminated());
 		assertTrue("executor should be shutdown", executor.isShutdown());
 		latch.countDown();
 		assertTrue("finally executor should terminate successfully",

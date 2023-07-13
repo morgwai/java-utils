@@ -33,7 +33,9 @@ public class NoCopyByteArrayOutputStreamTest {
 	public void testGetBufferThrowsIfStreamUnclosed() {
 		try {
 			stream.getBuffer();
-			fail("IllegalStateException expected");
+			fail(
+				"accessing the buffer of an unclosed stream should throw an IllegalStateException"
+			);
 		} catch (IllegalStateException expected) {}
 	}
 
@@ -42,7 +44,7 @@ public class NoCopyByteArrayOutputStreamTest {
 	@Test
 	public void testGetBufferReturnsUnderlyingBufferReference() {
 		stream.close();
-		assertSame("getBuffer() should return reference to the underlying buffer",
+		assertSame("getBuffer() should return a reference to the underlying buffer",
 				stream.bufferReference, stream.getBuffer());
 	}
 
@@ -53,7 +55,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.write(32);
-			fail("IllegalStateException expected");
+			fail("writing to a closed stream should throw an IllegalStateException");
 		} catch (IllegalStateException expected) {}
 	}
 
@@ -64,7 +66,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.write(null);
-			fail("NPE expected");
+			fail("NPE should be thrown if the data to write is null");
 		} catch (NullPointerException expected) {}
 	}
 
@@ -75,7 +77,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.write(new byte[5]);
-			fail("IllegalStateException expected");
+			fail("writing to a closed stream should throw an IllegalStateException");
 		} catch (IllegalStateException expected) {}
 	}
 
@@ -86,7 +88,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.write(null, 1, 1);
-			fail("NPE expected");
+			fail("NPE should be thrown if the data to write is null");
 		} catch (NullPointerException expected) {}
 	}
 
@@ -97,7 +99,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.write(new byte[5], 1, 1);
-			fail("IllegalStateException expected");
+			fail("writing to a closed stream should throw an IllegalStateException");
 		} catch (IllegalStateException expected) {}
 	}
 
@@ -108,7 +110,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.writeBytes(null);
-			fail("NPE expected");
+			fail("NPE should be thrown if the data to write is null");
 		} catch (NullPointerException expected) {}
 	}
 
@@ -119,7 +121,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.writeBytes(new byte[5]);
-			fail("IllegalStateException expected");
+			fail("writing to a closed stream should throw an IllegalStateException");
 		} catch (IllegalStateException expected) {}
 	}
 
@@ -130,7 +132,7 @@ public class NoCopyByteArrayOutputStreamTest {
 		stream.close();
 		try {
 			stream.reset();
-			fail("IllegalStateException expected");
+			fail("resetting a closed stream should throw an IllegalStateException");
 		} catch (IllegalStateException expected) {}
 	}
 }
