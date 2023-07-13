@@ -117,7 +117,9 @@ public interface Awaitable {
 						final var remainingNanos = deadlineNanos - System.nanoTime();
 						if (remainingNanos <= 0L) return false;
 						monitor.wait(
-							remainingNanos / 1_000_000L, (int)(remainingNanos % 1_000_000L));
+							remainingNanos / 1_000_000L,
+							(int)(remainingNanos % 1_000_000L)
+						);
 					}
 				}
 				return true;
