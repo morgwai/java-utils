@@ -27,7 +27,7 @@ public class AwaitableTest {
 	 */
 	final long MAX_INACCURACY_MILLIS = 2L;
 
-	AssertionError asyncError;
+	Throwable asyncError;
 
 
 
@@ -113,7 +113,7 @@ public class AwaitableTest {
 
 
 
-	public void testInterruptAndContinue(boolean zeroTimeout) throws InterruptedException {
+	public void testInterruptAndContinue(boolean zeroTimeout) throws Throwable {
 		final long totalTimeoutMillis = zeroTimeout ? 0L : 100L;
 		final boolean[] taskExecuted = {false, false, false, false};
 		final var awaitingThread = new Thread(() -> {
@@ -186,19 +186,19 @@ public class AwaitableTest {
 	}
 
 	@Test
-	public void testInterruptAndContinueNoTimeout() throws InterruptedException {
+	public void testInterruptAndContinueNoTimeout() throws Throwable {
 		testInterruptAndContinue(true);
 	}
 
 	@Test
-	public void testInterruptAndContinueWithTimeout() throws InterruptedException {
+	public void testInterruptAndContinueWithTimeout() throws Throwable {
 		testInterruptAndContinue(false);
 	}
 
 
 
 	@Test
-	public void testInterruptAndAbort() throws InterruptedException {
+	public void testInterruptAndAbort() throws Throwable {
 		final long TOTAL_TIMEOUT_MILLIS = 100L;
 		final boolean[] taskExecuted = {false, false, false};
 		final Awaitable.WithUnit[] tasks = {
@@ -261,7 +261,7 @@ public class AwaitableTest {
 
 
 	@Test
-	public void testAwaitableOfExecutorTermination() throws InterruptedException {
+	public void testAwaitableOfExecutorTermination() throws Throwable {
 		final var executor = new ThreadPoolExecutor(
 				2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>());
 		final var latch = new CountDownLatch(1);
@@ -269,7 +269,9 @@ public class AwaitableTest {
 			() -> {
 				try {
 					latch.await();
-				} catch (InterruptedException ignored) {}
+				} catch (InterruptedException e) {
+					asyncError = e;
+				}
 			}
 		);
 		final var termination = Awaitable.ofTermination(executor);
@@ -282,12 +284,13 @@ public class AwaitableTest {
 		assertTrue("awaiting termination should succeed after latch is lowered",
 				termination.await(20L));
 		assertTrue("executor should terminate after latch is lowered", executor.isTerminated());
+		if (asyncError != null)  throw asyncError;
 	}
 
 
 
 	@Test
-	public void testAwaitableOfExecutorEnforcedTermination() throws InterruptedException {
+	public void testAwaitableOfExecutorEnforcedTermination() throws Throwable {
 		final var executor = new ThreadPoolExecutor(
 				2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>());
 		final var latch = new CountDownLatch(1);
@@ -298,7 +301,9 @@ public class AwaitableTest {
 				} catch (InterruptedException e) {
 					try {
 						latch.await();
-					} catch (InterruptedException ignored) {}
+					} catch (InterruptedException e2) {
+						asyncError = e2;
+					}
 				}
 			}
 		);
@@ -311,18 +316,21 @@ public class AwaitableTest {
 		latch.countDown();
 		assertTrue("finally executor should terminate successfully",
 				executor.awaitTermination(50L, TimeUnit.MILLISECONDS));
+		if (asyncError != null)  throw asyncError;
 	}
 
 
 
 	@Test
-	public void testAwaitableOfThreadJoin() throws InterruptedException {
+	public void testAwaitableOfThreadJoin() throws Throwable {
 		final var latch = new CountDownLatch(1);
 		final var thread = new Thread(
 			() -> {
 				try {
 					latch.await();
-				} catch (InterruptedException ignore) {}
+				} catch (InterruptedException e) {
+					asyncError = e;
+				}
 			}
 		);
 		thread.start();
@@ -342,12 +350,13 @@ public class AwaitableTest {
 		assertTrue("joining should succeed after lowering latch",
 				joining.await(timeoutNanos, TimeUnit.NANOSECONDS));
 		assertFalse("thread should terminate after lowering latch", thread.isAlive());
+		if (asyncError != null)  throw asyncError;
 	}
 
 
 
 	@Test
-	public void testAwaitMultipleThreadJoin() throws InterruptedException {
+	public void testAwaitMultipleThreadJoin() throws Throwable {
 		final int NUMBER_OF_THREADS = 5;
 		final var threads = new Thread[NUMBER_OF_THREADS];
 		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
@@ -357,7 +366,9 @@ public class AwaitableTest {
 				() -> {
 					try {
 						Thread.sleep(10L);
-					} catch (InterruptedException ignored) {}
+					} catch (InterruptedException e) {
+						asyncError = e;
+					}
 				}
 			);
 			threads[i].start();
@@ -368,5 +379,6 @@ public class AwaitableTest {
 			Awaitable::ofJoin,
 			Arrays.asList(threads));
 		assertTrue("all tasks should be marked as completed", failed.isEmpty());
+		if (asyncError != null)  throw asyncError;
 	}
 }
