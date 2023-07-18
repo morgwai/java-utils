@@ -71,7 +71,7 @@ public interface Awaitable {
 
 
 	/**
-	 * Creates {@link Awaitable.WithUnit} of {@link Thread#join(long, int) joining a thread}.
+	 * Creates an {@link Awaitable.WithUnit} of {@link Thread#join(long, int) joining a thread}.
 	 * The result is based on {@link Thread#isAlive()}. If {@code 0} is passed as {@code timeout},
 	 * the operation will wait forever for the thread to finish, similarly to the semantics of
 	 * {@link Thread#join(long) join(0)} (note that non of the
@@ -130,7 +130,7 @@ public interface Awaitable {
 
 
 	/**
-	 * Creates {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
+	 * Creates an {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}.
 	 */
 	static Awaitable.WithUnit ofTermination(ExecutorService executor) {
@@ -143,9 +143,11 @@ public interface Awaitable {
 
 
 	/**
-	 * Creates {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
+	 * Creates an {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}.
 	 * If {@code executor} fails to terminate, {@link ExecutorService#shutdownNow()} is called.
+	 * @return {@code true} if and only if {@code executor} shutdown cleanly and did not require
+	 * {@link ExecutorService#shutdownNow()} to be called. {@code false} otherwise.
 	 */
 	static Awaitable.WithUnit ofEnforcedTermination(ExecutorService executor) {
 		return (timeout, unit) -> {
