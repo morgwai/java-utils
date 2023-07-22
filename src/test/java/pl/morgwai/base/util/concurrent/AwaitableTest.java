@@ -60,8 +60,14 @@ public class AwaitableTest {
 
 	@Test
 	public void testRemainingTimeoutAdjusting() throws InterruptedException {
-		final long FIRST_TASK_DURATION_MILLIS = 10L;
-		final long TOTAL_TIMEOUT_MILLIS = FIRST_TASK_DURATION_MILLIS + 30L;
+		final long FIRST_TASK_MILLIS = 100L;
+		final long SECOND_TASK_MILLIS = 150L;
+		final long TOTAL_TIMEOUT_MILLIS =
+				FIRST_TASK_MILLIS + SECOND_TASK_MILLIS + 30L;
+		final String INACCURACY_MESSAGE = "timeout adjustment inaccuracy should be below "
+				+ MAX_INACCURACY_MILLIS + "ms (this may fail if another process was using much CPU "
+				+ "or if the VM was warming up, so try again. If the failure persists it means a "
+				+  "bug)";
 
 		assertTrue("all tasks should be marked as completed", Awaitable.awaitMultiple(
 			TOTAL_TIMEOUT_MILLIS,
@@ -69,19 +75,32 @@ public class AwaitableTest {
 			(timeout, unit) -> {
 				assertEquals("1st task should get the full timeout",
 						TOTAL_TIMEOUT_MILLIS, unit.toMillis(timeout));
-				Thread.sleep(FIRST_TASK_DURATION_MILLIS);
+				Thread.sleep(FIRST_TASK_MILLIS);
 				return true;
 			},
 			(timeout, unit) -> {
 				final var timeoutMillis = unit.toMillis(timeout);
 				assertTrue("timeouts of subsequent tasks should be correctly adjusted",
-						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_DURATION_MILLIS >= timeoutMillis);
+						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS >= timeoutMillis);
+				assertTrue(INACCURACY_MESSAGE,
+						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - timeoutMillis
+								<= MAX_INACCURACY_MILLIS
+				);
+				Thread.sleep(SECOND_TASK_MILLIS);
+				return true;
+			},
+			(timeout, unit) -> {
+				final var timeoutMillis = unit.toMillis(timeout);
 				assertTrue(
-						"timeout adjustment inaccuracy should be below " + MAX_INACCURACY_MILLIS
-								+ "ms (this may fail if another process was using much CPU or if"
-								+ " the VM was warming up, so try again)",
-						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_DURATION_MILLIS - timeoutMillis
-								<= MAX_INACCURACY_MILLIS);
+					"timeouts of subsequent tasks should be correctly adjusted",
+					TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - SECOND_TASK_MILLIS
+								>= timeoutMillis
+				);
+				assertTrue(
+					INACCURACY_MESSAGE,
+					TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - SECOND_TASK_MILLIS - timeoutMillis
+							<= 2 * MAX_INACCURACY_MILLIS
+				);
 				Thread.sleep(unit.toMillis(timeout) + MAX_INACCURACY_MILLIS);
 				return true;
 			},

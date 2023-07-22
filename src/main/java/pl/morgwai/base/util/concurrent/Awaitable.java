@@ -213,20 +213,22 @@ public interface Awaitable {
 		boolean continueOnInterrupt,
 		Iterator<Entry<T>> operationEntries
 	) throws AwaitInterruptedException {
-		final var startNanos = System.nanoTime();
 		var remainingNanos =  unit.toNanos(timeout);
+		final var deadlineNanos = System.nanoTime() + remainingNanos;
 		final var failedTasks = new LinkedList<T>();
 		final var interruptedTasks = new LinkedList<T>();
 		boolean interrupted = false;
 		while (operationEntries.hasNext()) {
 			final var operationEntry = operationEntries.next();
 			try {
-				if ( !operationEntry.operation.toAwaitableWithUnit()
-						.await(remainingNanos, TimeUnit.NANOSECONDS)) {
+				if (
+					!operationEntry.operation.toAwaitableWithUnit()
+							.await(remainingNanos, TimeUnit.NANOSECONDS)
+				) {
 					failedTasks.add(operationEntry.object);
 				}
 				if (remainingNanos > 1L) {
-					remainingNanos -= System.nanoTime() - startNanos;
+					remainingNanos = deadlineNanos - System.nanoTime();
 					if (remainingNanos < 1L) remainingNanos = 1L;
 				}
 			} catch (InterruptedException e) {
