@@ -46,7 +46,7 @@ public class AwaitableTest {
 				(taskNumber) -> (Awaitable.WithUnit)
 						(timeout, unit) -> !tasksToFail.contains(taskNumber),
 				IntStream.range(0, 20).boxed().collect(Collectors.toList()));
-		assertEquals("number of failed tasks should match",
+		assertEquals("number of failed tasks should equal to the size of tasksToFail",
 				tasksToFail.size(), failed.size());
 		for (var task: failed) {
 			assertTrue("failed task should be one of those expected to fail ",
@@ -114,8 +114,10 @@ public class AwaitableTest {
 
 
 	public void testInterruptAndContinue(boolean zeroTimeout) throws Throwable {
-		final long totalTimeoutMillis = zeroTimeout ? 0L : 100L;
+		final var totalTimeoutMillis = zeroTimeout ? 0L : 100L;
 		final boolean[] taskExecuted = {false, false, false, false};
+		final var task1Started = new CountDownLatch(1);
+		final var task1BlockingLatch = new CountDownLatch(1);
 		final var awaitingThread = new Thread(() -> {
 			try {
 				try {
@@ -135,7 +137,8 @@ public class AwaitableTest {
 							1,
 							(timeoutMillis) -> {
 								taskExecuted[1] = true;
-								Thread.sleep(100L);
+								task1Started.countDown();
+								task1BlockingLatch.await(200L, TimeUnit.MILLISECONDS);
 								fail("InterruptedException should be thrown");
 								return true;
 							}
@@ -178,7 +181,7 @@ public class AwaitableTest {
 		});
 
 		awaitingThread.start();
-		Thread.sleep(5L);
+		assertTrue("task-1 should start", task1Started.await(100L, TimeUnit.MILLISECONDS));
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
 		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
@@ -201,6 +204,8 @@ public class AwaitableTest {
 	public void testInterruptAndAbort() throws Throwable {
 		final long TOTAL_TIMEOUT_MILLIS = 100L;
 		final boolean[] taskExecuted = {false, false, false};
+		final var task1Started = new CountDownLatch(1);
+		final var task1BlockingLatch = new CountDownLatch(1);
 		final Awaitable.WithUnit[] tasks = {
 			(timeout, unit) -> {
 				taskExecuted[0] = true;
@@ -210,7 +215,8 @@ public class AwaitableTest {
 			},
 			(timeout, unit) -> {
 				taskExecuted[1] = true;
-				Thread.sleep(unit.toMillis(timeout));
+				task1Started.countDown();
+				task1BlockingLatch.await(timeout, unit);
 				fail("InterruptedException should be thrown");
 				return true;
 			},
@@ -251,7 +257,7 @@ public class AwaitableTest {
 		});
 
 		awaitingThread.start();
-		Thread.sleep(5L);
+		assertTrue("task-1 should start", task1Started.await(100L, TimeUnit.MILLISECONDS));
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
 		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
@@ -264,26 +270,33 @@ public class AwaitableTest {
 	public void testAwaitableOfExecutorTermination() throws Throwable {
 		final var executor = new ThreadPoolExecutor(
 				2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>());
-		final var latch = new CountDownLatch(1);
+		final var taskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
 		executor.execute(
 			() -> {
+				taskStarted.countDown();
 				try {
-					latch.await();
+					taskBlockingLatch.await();
 				} catch (InterruptedException e) {
 					asyncError = e;
 				}
 			}
 		);
+
 		final var termination = Awaitable.ofTermination(executor);
 		assertFalse("executor should not be shutdown until termination is being awaited",
 				executor.isShutdown());
-		assertFalse("termination should fail before latch is lowered", termination.await(20L));
+		assertTrue("task should start", taskStarted.await(100L, TimeUnit.MILLISECONDS));
+
+		assertFalse("termination should fail if the task is not completed", termination.await(20L));
 		assertTrue("executor should be shutdown", executor.isShutdown());
-		assertFalse("termination should fail before latch is lowered", executor.isTerminated());
-		latch.countDown();
-		assertTrue("awaiting termination should succeed after latch is lowered",
+		assertFalse("executor should not terminate before the task is completed",
+				executor.isTerminated());
+		taskBlockingLatch.countDown();
+		assertTrue("awaiting termination should succeed after the task is allowed to complete",
 				termination.await(20L));
-		assertTrue("executor should terminate after latch is lowered", executor.isTerminated());
+		assertTrue("executor should terminate after the task is completed",
+				executor.isTerminated());
 		if (asyncError != null)  throw asyncError;
 	}
 
@@ -293,41 +306,43 @@ public class AwaitableTest {
 	public void testAwaitableOfExecutorEnforcedTermination() throws Throwable {
 		final var executor = new ThreadPoolExecutor(
 				2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>());
-		final var latch = new CountDownLatch(1);
+		final var taskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
 		executor.execute(
 			() -> {
+				taskStarted.countDown();
 				try {
-					Thread.sleep(100_000L);
-				} catch (InterruptedException e) {
-					try {
-						latch.await();
-					} catch (InterruptedException e2) {
-						asyncError = e2;
-					}
+					taskBlockingLatch.await();
+				} catch (InterruptedException expected) {
+					System.out.println("task interrupted");
 				}
 			}
 		);
+
 		final var enforcedTermination = Awaitable.ofEnforcedTermination(executor);
 		assertFalse("executor should not be shutdown until termination is being awaited",
 				executor.isShutdown());
-		assertFalse("awaiting termination should fail", enforcedTermination.await(20L));
-		assertFalse("executor should not terminate", executor.isTerminated());
-		assertTrue("executor should be shutdown", executor.isShutdown());
-		latch.countDown();
-		assertTrue("finally executor should terminate successfully",
-				executor.awaitTermination(50L, TimeUnit.MILLISECONDS));
-		if (asyncError != null)  throw asyncError;
+		assertTrue("task should start", taskStarted.await(100L, TimeUnit.MILLISECONDS));
+
+		executor.shutdown();
+		assertFalse("executor should not terminate if the task is stuck",
+				executor.awaitTermination(20L, TimeUnit.MILLISECONDS));
+
+		assertFalse("enforcedTermination should report unclean termination",
+				enforcedTermination.await(20L));
+		assertTrue("executor should terminate after enforcedTermination",
+				executor.awaitTermination(20L, TimeUnit.MILLISECONDS));
 	}
 
 
 
 	@Test
 	public void testAwaitableOfThreadJoin() throws Throwable {
-		final var latch = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
 		final var thread = new Thread(
 			() -> {
 				try {
-					latch.await();
+					taskBlockingLatch.await();
 				} catch (InterruptedException e) {
 					asyncError = e;
 				}
@@ -335,21 +350,21 @@ public class AwaitableTest {
 		);
 		thread.start();
 		final var joining = Awaitable.ofJoin(thread);
-		assertTrue("thread should be alive before latch is lowered", thread.isAlive());
+		assertTrue("thread should be alive before taskBlockingLatch is lowered", thread.isAlive());
 		assertFalse("thread should not be interrupted", thread.isInterrupted());
 		final long timeoutNanos = 20_999_999L;  // almost 21ms
 		final long startMillis = System.currentTimeMillis();
-		assertFalse("joining should fail before latch is lowered",
+		assertFalse("joining should fail before taskBlockingLatch is lowered",
 				joining.await(timeoutNanos, TimeUnit.NANOSECONDS));
 		assertTrue("timeout should be correctly converted",
 				System.currentTimeMillis() - startMillis > timeoutNanos / 1_000_000L);
 				// hopefully this will fail if 999_999 nanos are not passed correctly to join(...)
 		assertTrue("attempt to join should not interrupt thread", thread.isAlive());
 		assertFalse("attempt to join should not interrupt thread", thread.isInterrupted());
-		latch.countDown();
-		assertTrue("joining should succeed after lowering latch",
+		taskBlockingLatch.countDown();
+		assertTrue("joining should succeed after switching taskBlockingLatch",
 				joining.await(timeoutNanos, TimeUnit.NANOSECONDS));
-		assertFalse("thread should terminate after lowering latch", thread.isAlive());
+		assertFalse("thread should terminate after switching taskBlockingLatch", thread.isAlive());
 		if (asyncError != null)  throw asyncError;
 	}
 
@@ -357,28 +372,35 @@ public class AwaitableTest {
 
 	@Test
 	public void testAwaitMultipleThreadJoin() throws Throwable {
-		final int NUMBER_OF_THREADS = 5;
+		final var EXECUTION_DELAY_MILLIS = 10L;
+		final var NUMBER_OF_THREADS = 100;
+		final var allThreadsStarted = new CountDownLatch(NUMBER_OF_THREADS);
 		final var threads = new Thread[NUMBER_OF_THREADS];
 		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
 			// it would be cool to create anonymous subclass of Thread that verifies params of
 			// join(...), unfortunately join(...) is final...
 			threads[i] = new Thread(
 				() -> {
+					allThreadsStarted.countDown();
 					try {
-						Thread.sleep(10L);
+						Thread.sleep(EXECUTION_DELAY_MILLIS);
 					} catch (InterruptedException e) {
 						asyncError = e;
 					}
 				}
 			);
+			threads[i].setName("testThread-" + i);
 			threads[i].start();
 		}
 
+		assertTrue("all threads should start",  // sometimes threads start slowly...
+				allThreadsStarted.await(100L, TimeUnit.MILLISECONDS));
 		final var failed = Awaitable.awaitMultiple(
-			100L,  // on rare occasions threads take long to start
+			EXECUTION_DELAY_MILLIS + 20L,
 			Awaitable::ofJoin,
-			Arrays.asList(threads));
-		assertTrue("all tasks should be marked as completed", failed.isEmpty());
+			Arrays.asList(threads)
+		);
+		assertTrue("all threads should be marked as completed", failed.isEmpty());
 		if (asyncError != null)  throw asyncError;
 	}
 

@@ -2,6 +2,7 @@
 package pl.morgwai.base.util.concurrent;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
 
@@ -37,6 +38,7 @@ public class OrderedConcurrentOutputBufferTest {
 		return messageCount;
 	}
 
+	Throwable asyncError;
 
 
 	@Test
@@ -193,31 +195,43 @@ public class OrderedConcurrentOutputBufferTest {
 
 	@Test
 	public void testAddBucketAndSignalWhileClosingTail()
-			throws InterruptedException {
+			throws Throwable {
 		// tries to trigger a race condition that was causing output to be closed too early
 		for (int i = 0; i < 100; i++) {
 			setup();
-			var bucket1 = buffer.addBucket();
+			final var bucket1 = buffer.addBucket();
 			bucket1.write(new Message(1, 1));
-			Exception[] t2exceptionHolder = {null};
-			var t1 = new Thread(bucket1::close);
-			var t2 = new Thread(() -> {
-				try {
-					var bucket2 = buffer.addBucket();
-					buffer.signalNoMoreBuckets();
-					Thread.sleep(3L);
-					bucket2.write(new Message(2, 1));
-					bucket2.close();
-				} catch (Exception e) {
-					t2exceptionHolder[0] = e;
+			final var bothThreadsStartedBarrier = new CyclicBarrier(2);
+			final var t1 = new Thread(
+				() -> {
+					try {
+						bothThreadsStartedBarrier.await(100L, TimeUnit.MILLISECONDS);
+						bucket1.close();
+					} catch (Throwable e) {
+						asyncError = e;
+					}
 				}
-			});
+			);
+			final var t2 = new Thread(
+				() -> {
+					try {
+						bothThreadsStartedBarrier.await(100L, TimeUnit.MILLISECONDS);
+						final var bucket2 = buffer.addBucket();
+						buffer.signalNoMoreBuckets();
+						t1.join();
+						bucket2.write(new Message(2, 1));
+						bucket2.close();
+					} catch (Throwable e) {
+						asyncError = e;
+					}
+				}
+			);
 			t1.start();
 			t2.start();
 			t1.join();
 			t2.join();
 
-			if (t2exceptionHolder[0] != null) fail(t2exceptionHolder[0].toString());
+			if (asyncError != null) throw asyncError;
 			assertEquals("all messages should be written", 2, outputData.size());
 			assertTrue("messages should be written in order",
 					Comparators.isInStrictOrder(outputData, messageComparator));
@@ -229,25 +243,35 @@ public class OrderedConcurrentOutputBufferTest {
 
 	@Test
 	public void testAddBucketAndSignalWhileFlushingTail()
-			throws InterruptedException {
+			throws Throwable {
 		// tries to trigger a race condition that was causing output to be closed too early
 		for (int i = 0; i < 100; i++) {
 			setup();
-			var bucket1 = buffer.addBucket();
+			final var bucket1 = buffer.addBucket();
 			bucket1.write(new Message(1, 1));
-			var bucket2 = buffer.addBucket();
+			final var bucket2 = buffer.addBucket();
 			bucket2.close();
-			Exception[] t2exceptionHolder = {null};
-			var t1 = new Thread(bucket1::close);
-			var t2 = new Thread(() -> {
+			final var bothThreadsStartedBarrier = new CyclicBarrier(2);
+			final var t1 = new Thread(
+				() -> {
+					try {
+						bothThreadsStartedBarrier.await(100L, TimeUnit.MILLISECONDS);
+						bucket1.close();
+					} catch (Throwable e) {
+						asyncError = e;
+					}
+				}
+			);
+			final var t2 = new Thread(() -> {
 				try {
-					var bucket3 = buffer.addBucket();
+					bothThreadsStartedBarrier.await(100L, TimeUnit.MILLISECONDS);
+					final var bucket3 = buffer.addBucket();
 					buffer.signalNoMoreBuckets();
-					Thread.sleep(3L);
+					t1.join();
 					bucket3.write(new Message(3, 1));
 					bucket3.close();
-				} catch (Exception e) {
-					t2exceptionHolder[0] = e;
+				} catch (Throwable e) {
+					asyncError = e;
 				}
 			});
 			t1.start();
@@ -255,7 +279,7 @@ public class OrderedConcurrentOutputBufferTest {
 			t1.join();
 			t2.join();
 
-			if (t2exceptionHolder[0] != null) fail(t2exceptionHolder[0].toString());
+			if (asyncError != null) throw asyncError;
 			assertEquals("all messages should be written", 2, outputData.size());
 			assertTrue("messages should be written in order",
 					Comparators.isInStrictOrder(outputData, messageComparator));
