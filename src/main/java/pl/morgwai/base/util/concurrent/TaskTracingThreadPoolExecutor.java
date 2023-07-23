@@ -23,18 +23,14 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 		int maximumPoolSize,
 		long keepAliveTime,
 		TimeUnit unit,
-		BlockingQueue<Runnable> workQueue/*,
-		ThreadFactory threadFactory,
-		RejectedExecutionHandler handler*/
+		BlockingQueue<Runnable> workQueue
 	) {
 		super(
 			corePoolSize,
 			maximumPoolSize,
 			keepAliveTime,
 			unit,
-			workQueue/*,
-			threadFactory,
-			handler*/
+			workQueue
 		);
 		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
 	}
@@ -63,14 +59,13 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 		return wrapper.getForcedShutdownAftermath();
 	}
 
-
-
 	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
 
 		@Override public List<Runnable> shutdownNow() {
 			return TaskTracingThreadPoolExecutor.super.shutdownNow();
 		}
 
+		// all remaining methods throw UnsupportedOperationException
 		@Override public void execute(Runnable task) { throw new UnsupportedOperationException(); }
 		@Override public void shutdown() { throw new UnsupportedOperationException(); }
 		@Override public boolean isShutdown() { throw new UnsupportedOperationException(); }
@@ -78,5 +73,66 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 		@Override public boolean awaitTermination(long timeout, TimeUnit unit) {
 			throw new UnsupportedOperationException();
 		}
+	}
+
+
+
+	public TaskTracingThreadPoolExecutor(
+		int corePoolSize,
+		int maximumPoolSize,
+		long keepAliveTime,
+		TimeUnit unit,
+		BlockingQueue<Runnable> workQueue,
+		ThreadFactory threadFactory
+	) {
+		super(
+			corePoolSize,
+			maximumPoolSize,
+			keepAliveTime,
+			unit,
+			workQueue,
+			threadFactory
+		);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+	}
+
+	public TaskTracingThreadPoolExecutor(
+		int corePoolSize,
+		int maximumPoolSize,
+		long keepAliveTime,
+		TimeUnit unit,
+		BlockingQueue<Runnable> workQueue,
+		RejectedExecutionHandler handler
+	) {
+		super(
+			corePoolSize,
+			maximumPoolSize,
+			keepAliveTime,
+			unit,
+			workQueue,
+			handler
+		);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+	}
+
+	public TaskTracingThreadPoolExecutor(
+		int corePoolSize,
+		int maximumPoolSize,
+		long keepAliveTime,
+		TimeUnit unit,
+		BlockingQueue<Runnable> workQueue,
+		ThreadFactory threadFactory,
+		RejectedExecutionHandler handler
+	) {
+		super(
+			corePoolSize,
+			maximumPoolSize,
+			keepAliveTime,
+			unit,
+			workQueue,
+			threadFactory,
+			handler
+		);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
 	}
 }

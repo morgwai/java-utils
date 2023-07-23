@@ -4,8 +4,7 @@ package pl.morgwai.base.util.concurrent;
 import java.util.concurrent.*;
 
 import org.junit.Test;
-import pl.morgwai.base.util.concurrent.ScheduledTaskTracingThreadPoolExecutor
-		.DecomposableRunnableScheduledFuture;
+import pl.morgwai.base.util.concurrent.ScheduledTaskTracingThreadPoolExecutor.ScheduledExecution;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertSame;
@@ -30,10 +29,9 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 
 	@Override
 	protected Object unwrapIfScheduled(Runnable wrappedScheduledTask) {
-		assertTrue("wrappedScheduledTask should be a DecomposableRunnableScheduledFuture",
-				wrappedScheduledTask instanceof DecomposableRunnableScheduledFuture);
-		return ((DecomposableRunnableScheduledFuture<?>) wrappedScheduledTask)
-				.getWrappedScheduledTask();
+		assertTrue("wrappedScheduledTask should be a ScheduledExecution",
+				wrappedScheduledTask instanceof ScheduledExecution);
+		return ((ScheduledExecution<?>) wrappedScheduledTask).getTask();
 	}
 
 
@@ -63,7 +61,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 		};
 		final var delayMillis = 10L;
 
-		final var scheduledFuture = scheduler.scheduleWithFixedDelay(
+		final var scheduledExecution = scheduler.scheduleWithFixedDelay(
 				scheduledTask, 0L, delayMillis, TimeUnit.MILLISECONDS);
 		assertTrue("scheduledTask should run " + numberOfUnblockedRuns + " times without blocking",
 				taskRunsTheBlockingCycleLatch.await(
@@ -72,8 +70,8 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
-		assertFalse("scheduledFuture should not complete",
-				scheduledFuture.isDone());
+		assertFalse("scheduledExecution should not complete",
+				scheduledExecution.isDone());
 
 		testSubject.shutdownNow();
 		assertTrue("aftermath data should be present after the forced shutdown",
@@ -84,11 +82,11 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 		assertSame("runningTask should be wrapping scheduledTask",
 				scheduledTask, runningTask);
 		try {
-			scheduledFuture.get(20L, TimeUnit.MILLISECONDS);
+			scheduledExecution.get(20L, TimeUnit.MILLISECONDS);
 			fail("CancellationException expected");
 		} catch (CancellationException expected) {}
-		assertTrue("scheduledFuture should complete after the forced shutdown",
-				scheduledFuture.isDone());
+		assertTrue("scheduledExecution should complete after the forced shutdown",
+				scheduledExecution.isDone());
 		assertTrue("executor should terminate after the forced shutdown",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
 	}

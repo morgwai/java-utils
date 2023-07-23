@@ -16,8 +16,6 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 	Optional<ForcedShutdownAftermath> getForcedShutdownAftermath();
 
-
-
 	/** todo: blah... */
 	class ForcedShutdownAftermath {
 
@@ -42,17 +40,16 @@ public interface TaskTracingExecutor extends ExecutorService {
 	 * blah
 	 */
 	class TaskTracingExecutorDecorator extends AbstractExecutorService
-		implements TaskTracingExecutor {
+			implements TaskTracingExecutor {
 
 
 
 		final ExecutorService backingExecutor;
-		final ConcurrentMap<Thread, Runnable> runningTasks;
+		final ConcurrentMap<Thread, Runnable> runningTasks = new ConcurrentHashMap<>();
 
 
 
 		public TaskTracingExecutorDecorator(ExecutorService backingExecutor) {
-			runningTasks = new ConcurrentHashMap<>();
 			this.backingExecutor = backingExecutor;
 		}
 

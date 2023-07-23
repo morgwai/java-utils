@@ -19,16 +19,8 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
-	public ScheduledTaskTracingThreadPoolExecutor(
-		int corePoolSize/*,
-		ThreadFactory threadFactory,
-		RejectedExecutionHandler handler*/
-	) {
-		super(
-			corePoolSize/*,
-			threadFactory,
-			handler*/
-		);
+	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize) {
+		super(corePoolSize);
 		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
 	}
 
@@ -56,79 +48,13 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 		return wrapper.getForcedShutdownAftermath();
 	}
 
-
-
-	@Override
-	protected <V> RunnableScheduledFuture<V> decorateTask(
-		Runnable task,
-		RunnableScheduledFuture<V> scheduledFuture
-	) {
-		return new DecomposableRunnableScheduledFuture<>(task, scheduledFuture);
-	}
-
-
-
-	public static class DecomposableRunnableScheduledFuture<V> implements RunnableScheduledFuture<V>
-	{
-		public Runnable getWrappedScheduledTask() { return wrappedScheduledTask; }
-		final Runnable wrappedScheduledTask;
-
-		final RunnableScheduledFuture<V> wrappedScheduledFuture;
-
-		public DecomposableRunnableScheduledFuture(
-			Runnable wrappedScheduledTask,
-			RunnableScheduledFuture<V> wrappedScheduledFuture
-		) {
-			this.wrappedScheduledTask = wrappedScheduledTask;
-			this.wrappedScheduledFuture = wrappedScheduledFuture;
-		}
-
-		@Override public boolean isPeriodic() {
-			return wrappedScheduledFuture.isPeriodic();
-		}
-
-		@Override public void run() {
-			wrappedScheduledFuture.run();
-		}
-
-		@Override public boolean cancel(boolean mayInterruptIfRunning) {
-			return wrappedScheduledFuture.cancel(mayInterruptIfRunning);
-		}
-
-		@Override public boolean isCancelled() {
-			return wrappedScheduledFuture.isCancelled();
-		}
-
-		@Override public boolean isDone() {
-			return wrappedScheduledFuture.isDone();
-		}
-
-		@Override public V get() throws InterruptedException, ExecutionException {
-			return wrappedScheduledFuture.get();
-		}
-
-		@Override public V get(long timeout, TimeUnit unit)
-				throws InterruptedException, ExecutionException, TimeoutException {
-			return wrappedScheduledFuture.get(timeout, unit);
-		}
-
-		@Override public long getDelay(TimeUnit unit) {
-			return wrappedScheduledFuture.getDelay(unit);
-		}
-
-		@Override public int compareTo(Delayed o) {
-			return wrappedScheduledFuture.compareTo(o);
-		}
-	}
-
-
-
 	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
 
 		@Override public List<Runnable> shutdownNow() {
 			return ScheduledTaskTracingThreadPoolExecutor.super.shutdownNow();
 		}
 
+		// all remaining methods throw UnsupportedOperationException
 		@Override public void execute(Runnable task) { throw new UnsupportedOperationException(); }
 		@Override public void shutdown() { throw new UnsupportedOperationException(); }
 		@Override public boolean isShutdown() { throw new UnsupportedOperationException(); }
@@ -136,5 +62,85 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 		@Override public boolean awaitTermination(long timeout, TimeUnit unit) {
 			throw new UnsupportedOperationException();
 		}
+	}
+
+
+
+	@Override
+	protected <V> RunnableScheduledFuture<V> decorateTask(
+			Runnable task, RunnableScheduledFuture<V> scheduledItem) {
+		return new ScheduledExecution<>(task, scheduledItem);
+	}
+
+	/** todo: blah */
+	public static class ScheduledExecution<V> implements RunnableScheduledFuture<V> {
+
+		public Runnable getTask() { return task; }
+		final Runnable task;
+
+		final RunnableScheduledFuture<V> wrappedScheduledItem;
+
+		public ScheduledExecution(Runnable task, RunnableScheduledFuture<V> itemToWrap) {
+			this.task = task;
+			this.wrappedScheduledItem = itemToWrap;
+		}
+
+		// only dumb delegations to wrappedScheduledItem below
+
+		@Override public boolean isPeriodic() {
+			return wrappedScheduledItem.isPeriodic();
+		}
+
+		@Override public void run() {
+			wrappedScheduledItem.run();
+		}
+
+		@Override public boolean cancel(boolean mayInterruptIfRunning) {
+			return wrappedScheduledItem.cancel(mayInterruptIfRunning);
+		}
+
+		@Override public boolean isCancelled() {
+			return wrappedScheduledItem.isCancelled();
+		}
+
+		@Override public boolean isDone() {
+			return wrappedScheduledItem.isDone();
+		}
+
+		@Override public V get() throws InterruptedException, ExecutionException {
+			return wrappedScheduledItem.get();
+		}
+
+		@Override public V get(long timeout, TimeUnit unit)
+				throws InterruptedException, ExecutionException, TimeoutException {
+			return wrappedScheduledItem.get(timeout, unit);
+		}
+
+		@Override public long getDelay(TimeUnit unit) {
+			return wrappedScheduledItem.getDelay(unit);
+		}
+
+		@Override public int compareTo(Delayed o) {
+			return wrappedScheduledItem.compareTo(o);
+		}
+	}
+
+
+
+	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
+		super(corePoolSize, threadFactory);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+	}
+
+	public ScheduledTaskTracingThreadPoolExecutor(
+			int corePoolSize, RejectedExecutionHandler handler) {
+		super(corePoolSize, handler);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+	}
+
+	public ScheduledTaskTracingThreadPoolExecutor(
+			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+		super(corePoolSize, threadFactory, handler);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
 	}
 }
