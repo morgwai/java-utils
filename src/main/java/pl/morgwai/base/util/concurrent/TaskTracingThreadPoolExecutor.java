@@ -32,7 +32,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			unit,
 			workQueue
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 
@@ -93,7 +93,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			workQueue,
 			threadFactory
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public TaskTracingThreadPoolExecutor(
@@ -112,7 +112,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			workQueue,
 			handler
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public TaskTracingThreadPoolExecutor(
@@ -133,6 +133,6 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			threadFactory,
 			handler
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 }

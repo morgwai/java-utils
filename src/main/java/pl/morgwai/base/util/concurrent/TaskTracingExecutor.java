@@ -4,6 +4,8 @@ package pl.morgwai.base.util.concurrent;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 
@@ -45,22 +47,40 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 		final ExecutorService backingExecutor;
-		final ConcurrentMap<Thread, Runnable> runningTasks = new ConcurrentHashMap<>();
+		final ConcurrentMap<Thread, Runnable> runningTasks;
+
+		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
+		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
+				(tasks) -> tasks.stream()
+					.map(task -> ((TaskWrapper) task).wrappedTask)
+					.collect(Collectors.toList());
 
 
 
 		public TaskTracingExecutorDecorator(ExecutorService backingExecutor) {
+			this(backingExecutor, true, 1);
+		}
+
+		public TaskTracingExecutorDecorator(ThreadPoolExecutor backingExecutor) {
+			this(backingExecutor, true, 1);
+			decorateRejectedExecutionHandler(backingExecutor);
+		}
+
+		public TaskTracingExecutorDecorator(
+				ExecutorService backingExecutor, boolean unwrap, int poolSize) {
+			runningTasks = new ConcurrentHashMap<>(poolSize);
+			unwrapTasks = unwrap ? UNWRAP_TASKS : Function.identity();
 			this.backingExecutor = backingExecutor;
 		}
 
-
-
-		public void beforeExecute(Thread worker, Runnable task) {
-			runningTasks.put(worker, task);
-		}
-
-		public void afterExecute() {
-			runningTasks.remove(Thread.currentThread());
+		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
+			final var originalHandler = executor.getRejectedExecutionHandler();
+			executor.setRejectedExecutionHandler(
+				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
+					((TaskWrapper) wrappedTask).wrappedTask,
+					rejectingExecutor
+				)
+			);
 		}
 
 
@@ -76,19 +96,53 @@ public interface TaskTracingExecutor extends ExecutorService {
 		public List<Runnable> shutdownNow() {
 			aftermath = new ForcedShutdownAftermath(
 				List.copyOf(runningTasks.values()),
-				backingExecutor.shutdownNow()
+				unwrapTasks.apply(backingExecutor.shutdownNow())
 			);
 			return aftermath.unexecutedTasks;
 		}
 
 
 
-		// only dumb delegations to backingExecutor below:
+		public void beforeExecute(Thread worker, Runnable task) {
+			runningTasks.put(worker, task);
+		}
+
+		public void afterExecute() {
+			runningTasks.remove(Thread.currentThread());
+		}
+
+
 
 		@Override
 		public void execute(Runnable task) {
-			backingExecutor.execute(task);
+			backingExecutor.execute(new TaskWrapper(task));
 		}
+
+		protected class TaskWrapper implements Runnable {
+
+			final Runnable wrappedTask;
+
+			protected TaskWrapper(Runnable taskToWrap) {
+				wrappedTask = taskToWrap;
+			}
+
+			@Override public void run() {
+				beforeExecute(Thread.currentThread(), wrappedTask);
+				try {
+					wrappedTask.run();
+				} finally {
+					afterExecute();
+				}
+			}
+
+			@Override public String toString() {
+				return  wrappedTask.toString();
+			}
+		}
+
+
+
+		// only dumb delegations to backingExecutor below:
 
 		@Override
 		public void shutdown() {

@@ -21,7 +21,7 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize) {
 		super(corePoolSize);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 
@@ -68,8 +68,8 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	@Override
 	protected <V> RunnableScheduledFuture<V> decorateTask(
-			Runnable task, RunnableScheduledFuture<V> scheduledItem) {
-		return new ScheduledExecution<>(task, scheduledItem);
+			Runnable task, RunnableScheduledFuture<V> scheduledExecution) {
+		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
 	/** todo: blah */
@@ -129,18 +129,18 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
 		super(corePoolSize, threadFactory);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public ScheduledTaskTracingThreadPoolExecutor(
 			int corePoolSize, RejectedExecutionHandler handler) {
 		super(corePoolSize, handler);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public ScheduledTaskTracingThreadPoolExecutor(
 			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
 		super(corePoolSize, threadFactory, handler);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 }
