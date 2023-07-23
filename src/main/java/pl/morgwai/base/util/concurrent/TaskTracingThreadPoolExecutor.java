@@ -37,14 +37,18 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			handler*/
 		);
 		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
-		TaskTracingExecutorDecorator.decorateRejectedExecutionHandler(this);
 	}
 
 
 
 	@Override
-	public void execute(Runnable task) {
-		wrapper.execute(task);
+	protected void beforeExecute(Thread worker, Runnable task) {
+		wrapper.beforeExecute(worker, task);
+	}
+
+	@Override
+	protected void afterExecute(Runnable task, Throwable error) {
+		wrapper.afterExecute();
 	}
 
 
@@ -53,8 +57,6 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 	public List<Runnable> shutdownNow() {
 		return wrapper.shutdownNow();
 	}
-
-
 
 	@Override
 	public Optional<ForcedShutdownAftermath> getForcedShutdownAftermath() {
@@ -65,14 +67,11 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 
 	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
 
-		@Override public void execute(Runnable task) {
-			TaskTracingThreadPoolExecutor.super.execute(task);
-		}
-
 		@Override public List<Runnable> shutdownNow() {
 			return TaskTracingThreadPoolExecutor.super.shutdownNow();
 		}
 
+		@Override public void execute(Runnable task) { throw new UnsupportedOperationException(); }
 		@Override public void shutdown() { throw new UnsupportedOperationException(); }
 		@Override public boolean isShutdown() { throw new UnsupportedOperationException(); }
 		@Override public boolean isTerminated() { throw new UnsupportedOperationException(); }

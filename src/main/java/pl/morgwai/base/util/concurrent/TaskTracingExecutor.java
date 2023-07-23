@@ -4,7 +4,6 @@ package pl.morgwai.base.util.concurrent;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 
 
@@ -59,48 +58,12 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 
-		public TaskTracingExecutorDecorator(ThreadPoolExecutor backingExecutor) {
-			runningTasks = new ConcurrentHashMap<>(backingExecutor.getCorePoolSize());
-			this.backingExecutor = backingExecutor;
-			decorateRejectedExecutionHandler(backingExecutor);
+		public void beforeExecute(Thread worker, Runnable task) {
+			runningTasks.put(worker, task);
 		}
 
-		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
-			final var originalHandler = executor.getRejectedExecutionHandler();
-			executor.setRejectedExecutionHandler(
-					(wrappedTask, executor2) -> originalHandler.rejectedExecution(
-							((TaskWrapper) wrappedTask).wrappedTask, executor2));
-		}
-
-
-
-		protected class TaskWrapper implements Runnable {
-
-			final Runnable wrappedTask;
-
-			protected TaskWrapper(Runnable taskToWrap) {
-				wrappedTask = taskToWrap;
-			}
-
-			@Override public void run() {
-				runningTasks.put(Thread.currentThread(), wrappedTask);
-				try {
-					wrappedTask.run();
-				} finally {
-					runningTasks.remove(Thread.currentThread());
-				}
-			}
-
-			@Override public String toString() {
-				return  wrappedTask.toString();
-			}
-		}
-
-
-
-		@Override
-		public void execute(Runnable task) {
-			backingExecutor.execute(new TaskWrapper(task));
+		public void afterExecute() {
+			runningTasks.remove(Thread.currentThread());
 		}
 
 
@@ -116,9 +79,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 		public List<Runnable> shutdownNow() {
 			aftermath = new ForcedShutdownAftermath(
 				List.copyOf(runningTasks.values()),
-				backingExecutor.shutdownNow().stream()
-					.map((wrappedTask) -> ((TaskWrapper) wrappedTask).wrappedTask)
-					.collect(Collectors.toList())
+				backingExecutor.shutdownNow()
 			);
 			return aftermath.unexecutedTasks;
 		}
@@ -126,6 +87,11 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 		// only dumb delegations to backingExecutor below:
+
+		@Override
+		public void execute(Runnable task) {
+			backingExecutor.execute(task);
+		}
 
 		@Override
 		public void shutdown() {

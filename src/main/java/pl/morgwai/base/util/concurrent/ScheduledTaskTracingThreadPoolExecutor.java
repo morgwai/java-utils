@@ -15,7 +15,7 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
-	final ScheduledTaskTracingExecutorDecorator wrapper;
+	final TaskTracingExecutorDecorator wrapper;
 
 
 
@@ -29,8 +29,19 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 			threadFactory,
 			handler*/
 		);
-		wrapper = new ScheduledTaskTracingExecutorDecorator(new SuperClassWrapper());
-		TaskTracingExecutorDecorator.decorateRejectedExecutionHandler(this);
+		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper());
+	}
+
+
+
+	@Override
+	protected void beforeExecute(Thread worker, Runnable task) {
+		wrapper.beforeExecute(worker, task);
+	}
+
+	@Override
+	protected void afterExecute(Runnable task, Throwable error) {
+		wrapper.afterExecute();
 	}
 
 
@@ -39,8 +50,6 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 	public List<Runnable> shutdownNow() {
 		return wrapper.shutdownNow();
 	}
-
-
 
 	@Override
 	public Optional<ForcedShutdownAftermath> getForcedShutdownAftermath() {
@@ -54,8 +63,7 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 		Runnable task,
 		RunnableScheduledFuture<V> scheduledFuture
 	) {
-		return wrapper.new TraceableScheduledTask<>(
-				new DecomposableRunnableScheduledFuture<>(task, scheduledFuture));
+		return new DecomposableRunnableScheduledFuture<>(task, scheduledFuture);
 	}
 
 
@@ -115,77 +123,13 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
-	static class ScheduledTaskTracingExecutorDecorator extends TaskTracingExecutorDecorator {
-
-
-
-		ScheduledTaskTracingExecutorDecorator(ExecutorService backingExecutor) {
-			super(backingExecutor);
-		}
-
-
-
-		class TraceableScheduledTask<T> extends TaskWrapper
-				implements RunnableScheduledFuture<T> {
-
-			final RunnableScheduledFuture<T> wrappedScheduledFuture;
-
-			TraceableScheduledTask(RunnableScheduledFuture<T> scheduledFutureToWrap) {
-				super(scheduledFutureToWrap);
-				this.wrappedScheduledFuture = scheduledFutureToWrap;
-			}
-
-			// only dumb delegations to wrappedScheduledFuture below:
-
-			@Override public boolean isPeriodic() {
-				return wrappedScheduledFuture.isPeriodic();
-			}
-
-			@Override public boolean cancel(boolean mayInterruptIfRunning) {
-				return wrappedScheduledFuture.cancel(mayInterruptIfRunning);
-			}
-
-			@Override public boolean isCancelled() {
-				return wrappedScheduledFuture.isCancelled();
-			}
-
-			@Override public boolean isDone() {
-				return wrappedScheduledFuture.isDone();
-			}
-
-			@Override public T get() throws InterruptedException, ExecutionException {
-				return wrappedScheduledFuture.get();
-			}
-
-			@Override public T get(long timeout, TimeUnit unit)
-					throws InterruptedException, ExecutionException, TimeoutException {
-				return wrappedScheduledFuture.get(timeout, unit);
-			}
-
-			@Override public long getDelay(TimeUnit unit) {
-				return wrappedScheduledFuture.getDelay(unit);
-			}
-
-			@Override
-			public int compareTo(Delayed o) {
-				return wrappedScheduledFuture.compareTo(o);
-			}
-		}
-	}
-
-
-
 	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
 
 		@Override public List<Runnable> shutdownNow() {
 			return ScheduledTaskTracingThreadPoolExecutor.super.shutdownNow();
 		}
 
-		@Override public void execute(Runnable task) {
-			throw new UnsupportedOperationException();
-			//ScheduledTaskTracingThreadPoolExecutor.super.execute(task);
-		}
-
+		@Override public void execute(Runnable task) { throw new UnsupportedOperationException(); }
 		@Override public void shutdown() { throw new UnsupportedOperationException(); }
 		@Override public boolean isShutdown() { throw new UnsupportedOperationException(); }
 		@Override public boolean isTerminated() { throw new UnsupportedOperationException(); }
