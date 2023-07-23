@@ -6,8 +6,9 @@ import java.util.concurrent.*;
 import org.junit.Test;
 import pl.morgwai.base.util.concurrent.ConcurrentUtils.RunnableCallable;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static pl.morgwai.base.util.concurrent.ConcurrentUtils.waitForMonitorCondition;
 
 
 
@@ -15,10 +16,13 @@ public class ConcurrentUtilsTest {
 
 
 
+	Throwable asyncError;
+
+
+
 	@Test
 	public void testCompletableFutureSupplyAsyncThrowing() throws InterruptedException {
 		final var thrown = new Exception("thrown");
-		final Throwable[] caughtHolder = new Throwable[1];
 		final var completionLatch = new CountDownLatch(1);
 
 		final var execution = ConcurrentUtils.completableFutureSupplyAsync(
@@ -27,7 +31,7 @@ public class ConcurrentUtilsTest {
 		);
 		execution.whenComplete(
 			(result, caught) -> {
-				if (result == null) caughtHolder[0] = caught;
+				if (result == null) asyncError = caught;
 				completionLatch.countDown();
 			}
 		);
@@ -36,7 +40,7 @@ public class ConcurrentUtilsTest {
 				completionLatch.await(50L, TimeUnit.MILLISECONDS));
 		assertTrue("execution should be marked as done", execution.isDone());
 		assertSame("caught exception should be the same as thrown by the Callable task",
-				thrown, caughtHolder[0]);
+				thrown, asyncError);
 	}
 
 
@@ -79,5 +83,89 @@ public class ConcurrentUtilsTest {
 		protected void beforeExecute(Thread worker, Runnable task) {
 			capturedTask = task;
 		}
+	}
+
+
+
+
+	@Test
+	public void testAwaitableOfMonitorConditionWithInterrupt() throws Throwable {
+		final var monitor = new Object();
+		final var awaitingThread = new Thread(() -> {
+			try {
+				synchronized (monitor) {
+					waitForMonitorCondition(monitor, () -> false, 0L);
+				}
+				fail("InterruptedException expected");
+			} catch (InterruptedException expected) {
+			} catch (Throwable e) {
+				asyncError = e;
+			}
+		});
+
+		awaitingThread.start();
+		awaitingThread.join(20L);
+		awaitingThread.interrupt();
+		awaitingThread.join(100L);
+		assertFalse("awaiting thread should exit after an interrupt", awaitingThread.isAlive());
+		if (asyncError != null) throw asyncError;
+	}
+
+
+
+	@Test
+	public void testAwaitableOfMonitorConditionWithTimeout() throws Throwable {
+		final var monitor = new Object();
+		final var awaitingThread = new Thread(() -> {
+			try {
+				synchronized (monitor) {
+					assertFalse("awaiting should fail",
+							waitForMonitorCondition(monitor, () -> false, 20L));
+				}
+			} catch (Throwable e) {
+				asyncError = e;
+			}
+		});
+
+		awaitingThread.start();
+		awaitingThread.join(100L);
+
+		assertFalse("awaiting thread should exit after the timeout", awaitingThread.isAlive());
+		if (asyncError != null) throw asyncError;
+	}
+
+
+
+	@Test
+	public void testAwaitableOfMonitorCondition() throws Throwable {
+		final var monitor = new Object();
+		final boolean[] conditionHolder = {false};
+		final var awaitingThread = new Thread(() -> {
+			try {
+				synchronized (monitor) {
+					assertTrue("awaiting should succeed",
+							waitForMonitorCondition(monitor, () -> conditionHolder[0], 1000L));
+				}
+			} catch (Throwable e) {
+				asyncError = e;
+			}
+		});
+
+		awaitingThread.start();
+		awaitingThread.join(20L);
+		synchronized (monitor) {
+			monitor.notify();
+		}
+		awaitingThread.join(20L);
+		assertTrue("notifying awaiting thread without switching condition should have no effect",
+				awaitingThread.isAlive());
+		synchronized (monitor) {
+			conditionHolder[0] = true;
+			monitor.notify();
+		}
+		awaitingThread.join(50L);
+		assertFalse("after switching condition awaiting thread should exit",
+				awaitingThread.isAlive());
+		if (asyncError != null) throw asyncError;
 	}
 }
