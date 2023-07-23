@@ -72,15 +72,21 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
+	@Override
+	protected <V> RunnableScheduledFuture<V> decorateTask(
+			Callable<V> task, RunnableScheduledFuture<V> scheduledExecution) {
+		return new ScheduledExecution<>(task, scheduledExecution);
+	}
+
 	/** todo: blah */
 	public static class ScheduledExecution<V> implements RunnableScheduledFuture<V> {
 
-		public Runnable getTask() { return task; }
-		final Runnable task;
+		public Object getTask() { return task; }
+		final Object task;
 
 		final RunnableScheduledFuture<V> wrappedScheduledItem;
 
-		public ScheduledExecution(Runnable task, RunnableScheduledFuture<V> itemToWrap) {
+		public ScheduledExecution(Object task, RunnableScheduledFuture<V> itemToWrap) {
 			this.task = task;
 			this.wrappedScheduledItem = itemToWrap;
 		}

@@ -37,7 +37,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 
 
 	@Test
-	public void testStuckScheduledTask()
+	public void testStuckTaskScheduledWithFixedDelay()
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var numberOfUnblockedRuns = 2;
 		final var taskRunsTheBlockingCycleLatch = new CountDownLatch(1);
@@ -79,14 +79,61 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 		final var aftermath = testSubject.getForcedShutdownAftermath().get();
 		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
-		assertSame("runningTask should be wrapping scheduledTask",
-				scheduledTask, runningTask);
+		assertSame("runningTask should be wrapping scheduledTask", scheduledTask, runningTask);
 		try {
 			scheduledExecution.get(20L, TimeUnit.MILLISECONDS);
 			fail("CancellationException expected");
 		} catch (CancellationException expected) {}
 		assertTrue("scheduledExecution should complete after the forced shutdown",
 				scheduledExecution.isDone());
+		assertTrue("executor should terminate after the forced shutdown",
+				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
+	}
+
+
+
+	@Test
+	public void testStuckScheduledCallable()
+			throws InterruptedException, ExecutionException, TimeoutException {
+		final var taskStartedLatch = new CountDownLatch(1);
+		final var completionLatch = new CountDownLatch(1);
+		final var result = "result";
+		final var scheduledTask = new Callable<String>() {
+
+			@Override public String call() {
+				taskStartedLatch.countDown();
+				try {
+					completionLatch.await();
+				} catch (InterruptedException expected) {}
+				return result;
+			}
+
+			@Override public String toString() {
+				return "scheduledTask";
+			}
+		};
+		final var delayMillis = 10L;
+
+		final var scheduledExecution = scheduler.schedule(
+				scheduledTask, delayMillis, TimeUnit.MILLISECONDS);
+		assertTrue("scheduledTask should start",
+				taskStartedLatch.await(delayMillis + 20L, TimeUnit.MILLISECONDS));
+
+		testSubject.shutdown();
+		assertFalse("executor should not terminate",
+				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
+		assertFalse("scheduledExecution should not complete",
+				scheduledExecution.isDone());
+
+		testSubject.shutdownNow();
+		assertTrue("aftermath data should be present after the forced shutdown",
+				testSubject.getForcedShutdownAftermath().isPresent());
+		final var aftermath = testSubject.getForcedShutdownAftermath().get();
+		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
+		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
+		assertSame("runningTask should be wrapping scheduledTask", scheduledTask, runningTask);
+		assertSame("scheduledExecution should return the same result as scheduledTask",
+				result, scheduledExecution.get(20L, TimeUnit.MILLISECONDS));
 		assertTrue("executor should terminate after the forced shutdown",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
 	}
