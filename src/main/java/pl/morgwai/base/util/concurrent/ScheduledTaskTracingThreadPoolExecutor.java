@@ -33,7 +33,7 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		wrapper.afterExecute(task);
+		wrapper.afterExecute();
 	}
 
 

@@ -42,7 +42,7 @@ public class TaskTracingThreadPoolExecutorTest {
 		final var executor = new TaskTracingThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
 				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = executor;
-		expectedNoopTaskPerformanceFactor = 1.5d;
+		expectedNoopTaskPerformanceFactor = 1.15d;
 		return executor;
 	}
 
@@ -267,23 +267,36 @@ public class TaskTracingThreadPoolExecutorTest {
 
 	@Test
 	public void test1msTaskPerformance() throws InterruptedException {
-		testPerformance(1_000, 1L, 1.2d);
+		testPerformance(1_000, 1L, 1.1d);  // for 1ms-tasks task-tracing overhead should be
+				// absolutely negligible: 1.1d is a statistical inaccuracy exhibited even between
+				// ThreadPoolExecutor invocations for such a small number of tasks as 1k.
+				// Increasing numberOfTasks to 10k allows to decrease the factor to 1.01d for
+				// TaskTracingThreadPoolExecutor and TaskTracingExecutorDecorator, but then
+				// the tests take too much time (ScheduledTaskTracingThreadPoolExecutorTest needs
+				// 1.03d due to task decorating).
 	}
 
 	public void testPerformance(
-		int numberOfTask,
+		int numberOfTasks,
 		long taskDurationMillis,
 		double expectedPerformanceFactor
 	) throws InterruptedException {
 		final var threadPoolSize = Runtime.getRuntime().availableProcessors();
 		final var threadPoolExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
-				TimeUnit.DAYS, new LinkedBlockingQueue<>(numberOfTask));
+				TimeUnit.DAYS, new LinkedBlockingQueue<>(numberOfTasks));
 		final var threadPoolExecutorDuration =
-				measurePerformance(threadPoolExecutor, numberOfTask, taskDurationMillis);
-		testSubject = createTestSubjectAndFinishSetup(threadPoolSize, numberOfTask);
+				measurePerformance(threadPoolExecutor, numberOfTasks, taskDurationMillis);
+		testSubject = createTestSubjectAndFinishSetup(threadPoolSize, numberOfTasks);
 		final var testSubjectDuration =
-				measurePerformance(testSubject, numberOfTask, taskDurationMillis);
+				measurePerformance(testSubject, numberOfTasks, taskDurationMillis);
 		final var performanceFactor = ((double)testSubjectDuration) / threadPoolExecutorDuration;
+		if (log.isLoggable(Level.INFO)) log.info(String.format(
+			"%dk of %dms-tasks on %s resulted with %.3fx performanceFactor",
+			numberOfTasks / 1000,
+			taskDurationMillis,
+			testSubject.getClass().getSimpleName(),
+			performanceFactor
+		));
 		assertTrue(
 			"task tracing should not be more than " + expectedPerformanceFactor + " times slower"
 					+ " (was " + performanceFactor + "x)",
@@ -306,8 +319,10 @@ public class TaskTracingThreadPoolExecutorTest {
 		assertTrue("executor should terminate in a reasonable time",
 				executor.awaitTermination(60L, TimeUnit.SECONDS));
 		final var durationMillis = System.currentTimeMillis() - startMillis;
-		log.info((numberOfTasks / 1000) + "k of " + taskDurationMillis + "ms-tasks on "
-				+ executor.getClass().getSimpleName() + " took " + durationMillis + "ms");
+		if (log.isLoggable(Level.INFO)) {
+			log.info((numberOfTasks / 1000) + "k of " + taskDurationMillis + "ms-tasks on "
+					+ executor.getClass().getSimpleName() + " took " + durationMillis + "ms");
+		}
 		return durationMillis;
 	}
 
@@ -316,7 +331,7 @@ public class TaskTracingThreadPoolExecutorTest {
 	/**
 	 * Change the below value if you need logging:<br/>
 	 * {@code INFO} will log performance measurements from
-	 * {@link #measurePerformance(ExecutorService, int, long)}.
+	 * {@link #testPerformance(int, long, double)}.
 	 */
 	static Level LOG_LEVEL = Level.WARNING;
 	static final Logger log = Logger.getLogger(TaskTracingThreadPoolExecutorTest.class.getName());

@@ -46,7 +46,9 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 		final ExecutorService backingExecutor;
-		final Set<Runnable> runningTasks;
+
+		final Set<TaskHolder> runningTasks;
+		static class TaskHolder { volatile Runnable task; }
 
 		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
 		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
@@ -94,7 +96,9 @@ public interface TaskTracingExecutor extends ExecutorService {
 		@Override
 		public List<Runnable> shutdownNow() {
 			aftermath = new ForcedShutdownAftermath(
-				List.copyOf(runningTasks),
+				runningTasks.stream()
+					.map((holder) -> holder.task)
+					.collect(Collectors.toList()),
 				unwrapTasks.apply(backingExecutor.shutdownNow())
 			);
 			return aftermath.unexecutedTasks;
@@ -102,12 +106,21 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 
+
+		ThreadLocal<TaskHolder> taskHolder = new ThreadLocal<>();
+
 		public void beforeExecute(Runnable task) {
-			runningTasks.add(task);
+			var localHolder = taskHolder.get();
+			if (localHolder == null) {
+				localHolder = new TaskHolder();
+				taskHolder.set(localHolder);
+				runningTasks.add(localHolder);
+			}
+			localHolder.task = task;
 		}
 
-		public void afterExecute(Runnable task) {
-			runningTasks.remove(task);
+		public void afterExecute() {
+			taskHolder.get().task = null;
 		}
 
 
@@ -130,7 +143,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 				try {
 					wrappedTask.run();
 				} finally {
-					afterExecute(wrappedTask);
+					afterExecute();
 				}
 			}
 
