@@ -50,43 +50,32 @@ public class TaskTracingThreadPoolExecutorTest {
 
 
 	@Test
-	public void testExecuteCallable() throws InterruptedException {
-		final var thrown = new Exception("thrown");
-		final Throwable[] caughtHolder = new Throwable[1];
-		final var completionLatch = new CountDownLatch(1);
+	public void testExecuteCallable()
+			throws InterruptedException, TimeoutException, ExecutionException {
+		final var result = "result";
 
-		final var execution = completableFutureSupplyAsync(() -> { throw thrown; }, testSubject);
-		execution.whenComplete(
-			(result, caught) -> {
-				if (result == null) caughtHolder[0] = caught;
-				completionLatch.countDown();
-			}
-		);
-
-		assertTrue("the Callable task should complete",
-				completionLatch.await(50L, TimeUnit.MILLISECONDS));
-		assertTrue("execution should be marked as done", execution.isDone());
-		assertSame("caught exception should be the same as thrown by the Callable task",
-				thrown, caughtHolder[0]);
+		final var execution = completableFutureSupplyAsync(() -> result, testSubject);
+		assertSame("obtained result should be the same as returned",
+				result, execution.get(50L, TimeUnit.MILLISECONDS));
 	}
 
 
 
 	@Test
 	public void testStuckCallable() throws InterruptedException {
-		final var latchAwaitingTaskStartedLatch = new CountDownLatch(1);
-		final var completionLatch = new CountDownLatch(1);
-		final Callable<String> latchAwaitingTask = new Callable<>() {
+		final var latchAwaitingTaskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
+		final var latchAwaitingTask = new Callable<>() {
 			@Override public String call() throws Exception {
-				latchAwaitingTaskStartedLatch.countDown();
-				completionLatch.await();
+				latchAwaitingTaskStarted.countDown();
+				taskBlockingLatch.await();
 				return "";
 			}
 			@Override public String toString() {
 				return "latchAwaitingTask";
 			}
 		};
-		final Callable<Integer> instantTask = new Callable<>() {
+		final var instantTask = new Callable<>() {
 			@Override public Integer call()  {
 				return 0;
 			}
@@ -98,8 +87,8 @@ public class TaskTracingThreadPoolExecutorTest {
 		final var latchAwaitingTaskExecution =
 				completableFutureSupplyAsync(latchAwaitingTask, testSubject);
 		final var instantTaskExecution = completableFutureSupplyAsync(instantTask, testSubject);
-		assertTrue("latchAwaitingTask should be started",
-				latchAwaitingTaskStartedLatch.await(20L, TimeUnit.MILLISECONDS));
+		assertTrue("latchAwaitingTask should start",
+				latchAwaitingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
@@ -146,16 +135,16 @@ public class TaskTracingThreadPoolExecutorTest {
 	public void testStuckUninterruptibleCallable()
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var result = "result";
-		final var latchAwaitingTaskStartedLatch = new CountDownLatch(1);
-		final var completionLatch = new CountDownLatch(1);
-		final Callable<String> latchAwaitingTask = new Callable<>() {
+		final var latchAwaitingTaskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
+		final var latchAwaitingTask = new Callable<>() {
 			@Override public String call() {
-				latchAwaitingTaskStartedLatch.countDown();
-				boolean completionLatchSwitched = false;
-				while ( !completionLatchSwitched) {
+				latchAwaitingTaskStarted.countDown();
+				boolean blockingLatchSwitched = false;
+				while ( !blockingLatchSwitched) {
 					try {
-						completionLatch.await();
-						completionLatchSwitched = true;
+						taskBlockingLatch.await();
+						blockingLatchSwitched = true;
 					} catch (InterruptedException expected) {}
 				}
 				return result;
@@ -164,7 +153,7 @@ public class TaskTracingThreadPoolExecutorTest {
 				return "latchAwaitingTask";
 			}
 		};
-		final Callable<Integer> instantTask = new Callable<>() {
+		final var instantTask = new Callable<>() {
 			@Override public Integer call()  {
 				return 0;
 			}
@@ -176,8 +165,8 @@ public class TaskTracingThreadPoolExecutorTest {
 		final var latchAwaitingTaskExecution =
 				completableFutureSupplyAsync(latchAwaitingTask, testSubject);
 		final var instantTaskExecution = completableFutureSupplyAsync(instantTask, testSubject);
-		assertTrue("latchAwaitingTask should be started",
-				latchAwaitingTaskStartedLatch.await(20L, TimeUnit.MILLISECONDS));
+		assertTrue("latchAwaitingTask should start",
+				latchAwaitingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
@@ -226,10 +215,10 @@ public class TaskTracingThreadPoolExecutorTest {
 			latchAwaitingTaskExecution.isDone()
 		);
 
-		completionLatch.countDown();
+		taskBlockingLatch.countDown();
 		assertSame("result of latchAwaitingTaskExecution should be the same as returned",
 				result, latchAwaitingTaskExecution.get(20L, TimeUnit.MILLISECONDS));
-		assertTrue("executor should terminate after completionLatch is switched",
+		assertTrue("executor should terminate after taskBlockingLatch is switched",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
 	}
 
@@ -237,11 +226,11 @@ public class TaskTracingThreadPoolExecutorTest {
 
 	@Test
 	public void testExecutionRejection() {
-		final var taskCompletionLatch = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
 		testSubject.execute(  // make executor's thread busy
 			() -> {
 				try {
-					taskCompletionLatch.await();
+					taskBlockingLatch.await();
 				} catch (InterruptedException ignored) {}
 			}
 		);
@@ -255,6 +244,6 @@ public class TaskTracingThreadPoolExecutorTest {
 		assertSame("rejectingExecutor should be expectedRejectingExecutor",
 				expectedRejectingExecutor, rejectingExecutor);
 		assertSame("rejectedTask should be overloadingTask", overloadingTask, rejectedTask);
-		taskCompletionLatch.countDown();
+		taskBlockingLatch.countDown();
 	}
 }

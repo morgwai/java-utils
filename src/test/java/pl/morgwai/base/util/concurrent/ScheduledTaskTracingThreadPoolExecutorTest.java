@@ -45,8 +45,8 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 	public void testStuckTaskScheduledWithFixedDelay()
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var numberOfUnblockedRuns = 2;
-		final var taskRunsTheBlockingCycleLatch = new CountDownLatch(1);
-		final var completionLatch = new CountDownLatch(1);
+		final var taskEnteredTheBlockingCycle = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
 		final var scheduledTask = new Runnable() {
 
 			int count = 0;
@@ -54,9 +54,9 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 			@Override public void run() {
 				count++;
 				if (count <= numberOfUnblockedRuns) return;
-				taskRunsTheBlockingCycleLatch.countDown();
+				taskEnteredTheBlockingCycle.countDown();
 				try {
-					completionLatch.await();
+					taskBlockingLatch.await();
 				} catch (InterruptedException expected) {}
 			}
 
@@ -69,7 +69,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 		final var scheduledExecution = scheduler.scheduleWithFixedDelay(
 				scheduledTask, 0L, delayMillis, TimeUnit.MILLISECONDS);
 		assertTrue("scheduledTask should run " + numberOfUnblockedRuns + " times without blocking",
-				taskRunsTheBlockingCycleLatch.await(
+				taskEnteredTheBlockingCycle.await(
 						(delayMillis * numberOfUnblockedRuns) + 20L, TimeUnit.MILLISECONDS));
 
 		testSubject.shutdown();
@@ -100,15 +100,15 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 	@Test
 	public void testStuckScheduledCallable()
 			throws InterruptedException, ExecutionException, TimeoutException {
-		final var taskStartedLatch = new CountDownLatch(1);
-		final var completionLatch = new CountDownLatch(1);
+		final var taskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
 		final var result = "result";
 		final var scheduledTask = new Callable<String>() {
 
 			@Override public String call() {
-				taskStartedLatch.countDown();
+				taskStarted.countDown();
 				try {
-					completionLatch.await();
+					taskBlockingLatch.await();
 				} catch (InterruptedException expected) {}
 				return result;
 			}
@@ -122,7 +122,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 		final var scheduledExecution = scheduler.schedule(
 				scheduledTask, delayMillis, TimeUnit.MILLISECONDS);
 		assertTrue("scheduledTask should start",
-				taskStartedLatch.await(delayMillis + 20L, TimeUnit.MILLISECONDS));
+				taskStarted.await(delayMillis + 20L, TimeUnit.MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
