@@ -17,17 +17,34 @@ public class TaskTracingThreadPoolExecutorTest {
 
 	protected TaskTracingExecutor testSubject;
 
+	protected Executor expectedRejectingExecutor;
+	Runnable rejectedTask;
+	Executor rejectingExecutor;
+	protected final RejectedExecutionHandler rejectionHandler = (task, executor) -> {
+		rejectedTask = task;
+		rejectingExecutor = executor;
+		throw new RejectedExecutionException("rejected " + task);
+	};
+
 
 
 	@Before
 	public void setup() {
 		testSubject = new TaskTracingThreadPoolExecutor(
-				1, 1, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<>(1));
+				1, 1, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<>(1), rejectionHandler);
+		expectedRejectingExecutor = testSubject;
 	}
 
 	@After
 	public void shutdownNowIfNeeded() {
 		if ( !testSubject.isTerminated()) testSubject.shutdownNow();
+	}
+
+
+
+	/** For {@link ScheduledTaskTracingThreadPoolExecutorTest} */
+	protected Object unwrapIfScheduled(Runnable task) {
+		return task;
 	}
 
 
@@ -218,12 +235,26 @@ public class TaskTracingThreadPoolExecutorTest {
 
 
 
-	/** For {@link ScheduledTaskTracingThreadPoolExecutorTest} */
-	protected Object unwrapIfScheduled(Runnable task) {
-		return task;
+	@Test
+	public void testExecutionRejection() {
+		final var taskCompletionLatch = new CountDownLatch(1);
+		testSubject.execute(  // make executor's thread busy
+			() -> {
+				try {
+					taskCompletionLatch.await();
+				} catch (InterruptedException ignored) {}
+			}
+		);
+		testSubject.execute(() -> {});  // fill executor's queue
+		final Runnable overloadingTask = () -> {};
+
+		try {
+			testSubject.execute(overloadingTask);
+			fail("overloaded executor should throw a RejectedExecutionException");
+		} catch (RejectedExecutionException expected) {}
+		assertSame("rejectingExecutor should be expectedRejectingExecutor",
+				expectedRejectingExecutor, rejectingExecutor);
+		assertSame("rejectedTask should be overloadingTask", overloadingTask, rejectedTask);
+		taskCompletionLatch.countDown();
 	}
-
-
-
-	// TODO: execution rejection tests
 }

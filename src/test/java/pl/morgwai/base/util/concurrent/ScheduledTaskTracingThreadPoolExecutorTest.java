@@ -36,6 +36,11 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 
 
 
+	@Override
+	public void testExecutionRejection() {}  // ScheduledExecutor's queue grows until out of memory
+
+
+
 	@Test
 	public void testStuckTaskScheduledWithFixedDelay()
 			throws InterruptedException, ExecutionException, TimeoutException {
