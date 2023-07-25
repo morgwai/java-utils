@@ -39,12 +39,12 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
-		wrapper.beforeExecute(worker, task);
+		wrapper.beforeExecute(task);
 	}
 
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		wrapper.afterExecute();
+		wrapper.afterExecute(task);
 	}
 
 

@@ -1,8 +1,7 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.util.concurrent;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,7 +46,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 		final ExecutorService backingExecutor;
-		final ConcurrentMap<Thread, Runnable> runningTasks;
+		final Set<Runnable> runningTasks;
 
 		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
 		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
@@ -68,7 +67,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 		public TaskTracingExecutorDecorator(
 				ExecutorService backingExecutor, boolean unwrap, int poolSize) {
-			runningTasks = new ConcurrentHashMap<>(poolSize);
+			runningTasks = ConcurrentHashMap.newKeySet(poolSize);
 			unwrapTasks = unwrap ? UNWRAP_TASKS : Function.identity();
 			this.backingExecutor = backingExecutor;
 		}
@@ -95,7 +94,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 		@Override
 		public List<Runnable> shutdownNow() {
 			aftermath = new ForcedShutdownAftermath(
-				List.copyOf(runningTasks.values()),
+				List.copyOf(runningTasks),
 				unwrapTasks.apply(backingExecutor.shutdownNow())
 			);
 			return aftermath.unexecutedTasks;
@@ -103,12 +102,12 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 
-		public void beforeExecute(Thread worker, Runnable task) {
-			runningTasks.put(worker, task);
+		public void beforeExecute(Runnable task) {
+			runningTasks.add(task);
 		}
 
-		public void afterExecute() {
-			runningTasks.remove(Thread.currentThread());
+		public void afterExecute(Runnable task) {
+			runningTasks.remove(task);
 		}
 
 
@@ -127,11 +126,11 @@ public interface TaskTracingExecutor extends ExecutorService {
 			}
 
 			@Override public void run() {
-				beforeExecute(Thread.currentThread(), wrappedTask);
+				beforeExecute(wrappedTask);
 				try {
 					wrappedTask.run();
 				} finally {
-					afterExecute();
+					afterExecute(wrappedTask);
 				}
 			}
 
