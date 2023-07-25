@@ -63,7 +63,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 		}
 
 		public TaskTracingExecutorDecorator(ThreadPoolExecutor backingExecutor) {
-			this(backingExecutor, true, 1);
+			this(backingExecutor, true, backingExecutor.getCorePoolSize());
 			decorateRejectedExecutionHandler(backingExecutor);
 		}
 
