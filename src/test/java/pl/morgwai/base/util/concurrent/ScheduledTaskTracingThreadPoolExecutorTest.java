@@ -20,9 +20,11 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingThrea
 
 
 	@Override
-	public void setup() {
-		scheduler = new ScheduledTaskTracingThreadPoolExecutor(1);
-		testSubject = scheduler;
+	protected TaskTracingExecutor createTestSubjectAndFinishSetup(int threadPoolSize, int queueSize)
+	{
+		scheduler = new ScheduledTaskTracingThreadPoolExecutor(threadPoolSize);
+		expectedNoopTaskPerformanceFactor = 10.0d;
+		return scheduler;
 	}
 
 

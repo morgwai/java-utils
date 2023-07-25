@@ -12,10 +12,12 @@ public class TaskTracingExecutorDecoratorTest extends TaskTracingThreadPoolExecu
 
 
 	@Override
-	public void setup() {
-		final var backingExecutor = new ThreadPoolExecutor(
-				1, 1, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<>(1), rejectionHandler);
-		testSubject = new TaskTracingExecutorDecorator(backingExecutor);
+	protected TaskTracingExecutor createTestSubjectAndFinishSetup(int threadPoolSize, int queueSize)
+	{
+		final var backingExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
+				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = backingExecutor;
+		expectedNoopTaskPerformanceFactor = 2.0d;
+		return new TaskTracingExecutorDecorator(backingExecutor);
 	}
 }

@@ -2,6 +2,8 @@
 package pl.morgwai.base.util.concurrent;
 
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.junit.*;
 import pl.morgwai.base.util.concurrent.ConcurrentUtils.RunnableCallable;
@@ -26,13 +28,22 @@ public class TaskTracingThreadPoolExecutorTest {
 		throw new RejectedExecutionException("rejected " + task);
 	};
 
+	protected double expectedNoopTaskPerformanceFactor;
+
 
 
 	@Before
 	public void setup() {
-		testSubject = new TaskTracingThreadPoolExecutor(
-				1, 1, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<>(1), rejectionHandler);
-		expectedRejectingExecutor = testSubject;
+		testSubject = createTestSubjectAndFinishSetup(1, 1);
+	}
+
+	protected TaskTracingExecutor createTestSubjectAndFinishSetup(int threadPoolSize, int queueSize)
+	{
+		final var executor = new TaskTracingThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
+				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
+		expectedRejectingExecutor = executor;
+		expectedNoopTaskPerformanceFactor = 1.5d;
+		return executor;
 	}
 
 	@After
@@ -234,7 +245,7 @@ public class TaskTracingThreadPoolExecutorTest {
 				} catch (InterruptedException ignored) {}
 			}
 		);
-		testSubject.execute(() -> {});  // fill executor's queue
+		testSubject.execute(() -> {}); // fill executor's queue
 		final Runnable overloadingTask = () -> {};
 
 		try {
@@ -245,5 +256,78 @@ public class TaskTracingThreadPoolExecutorTest {
 				expectedRejectingExecutor, rejectingExecutor);
 		assertSame("rejectedTask should be overloadingTask", overloadingTask, rejectedTask);
 		taskBlockingLatch.countDown();
+	}
+
+
+
+	@Test
+	public void testNoopTaskPerformance() throws InterruptedException {
+		testPerformance(1_000_000, 0L, expectedNoopTaskPerformanceFactor);
+	}
+
+	@Test
+	public void test1msTaskPerformance() throws InterruptedException {
+		testPerformance(1_000, 1L, 1.2d);
+	}
+
+	public void testPerformance(
+		int numberOfTask,
+		long taskDurationMillis,
+		double expectedPerformanceFactor
+	) throws InterruptedException {
+		final var threadPoolSize = Runtime.getRuntime().availableProcessors();
+		final var threadPoolExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
+				TimeUnit.DAYS, new LinkedBlockingQueue<>(numberOfTask));
+		final var threadPoolExecutorDuration =
+				measurePerformance(threadPoolExecutor, numberOfTask, taskDurationMillis);
+		testSubject = createTestSubjectAndFinishSetup(threadPoolSize, numberOfTask);
+		final var testSubjectDuration =
+				measurePerformance(testSubject, numberOfTask, taskDurationMillis);
+		final var performanceFactor = ((double)testSubjectDuration) / threadPoolExecutorDuration;
+		assertTrue(
+			"task tracing should not be more than " + expectedPerformanceFactor + " times slower"
+					+ " (was " + performanceFactor + "x)",
+			expectedPerformanceFactor > performanceFactor
+		);
+	}
+
+	long measurePerformance(
+		ExecutorService executor,
+		int numberOfTasks,
+		long taskDurationMillis
+	) throws InterruptedException {
+		final var startMillis = System.currentTimeMillis();
+		for (int i = 0; i < numberOfTasks; i++) executor.execute(() -> {
+			try {
+				Thread.sleep(taskDurationMillis);
+			} catch (InterruptedException ignored) {}
+		});
+		executor.shutdown();
+		assertTrue("executor should terminate in a reasonable time",
+				executor.awaitTermination(60L, TimeUnit.SECONDS));
+		final var durationMillis = System.currentTimeMillis() - startMillis;
+		log.info((numberOfTasks / 1000) + "k of " + taskDurationMillis + "ms-tasks on "
+				+ executor.getClass().getSimpleName() + " took " + durationMillis + "ms");
+		return durationMillis;
+	}
+
+
+
+	/**
+	 * Change the below value if you need logging:<br/>
+	 * {@code INFO} will log performance measurements from
+	 * {@link #measurePerformance(ExecutorService, int, long)}.
+	 */
+	static Level LOG_LEVEL = Level.WARNING;
+	static final Logger log = Logger.getLogger(TaskTracingThreadPoolExecutorTest.class.getName());
+
+	@BeforeClass
+	public static void setupLogging() {
+		try {
+			LOG_LEVEL = Level.parse(System.getProperty(
+					TaskTracingThreadPoolExecutorTest.class.getPackageName() + ".level"));
+		} catch (Exception ignored) {}
+		log.setLevel(LOG_LEVEL);
+		for (final var handler: Logger.getLogger("").getHandlers()) handler.setLevel(LOG_LEVEL);
 	}
 }
