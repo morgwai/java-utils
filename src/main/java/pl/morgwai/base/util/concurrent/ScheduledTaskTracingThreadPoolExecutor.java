@@ -23,13 +23,14 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
-	final TaskTracingExecutorDecorator wrapper;
+	final TaskTracingExecutorDecorator taskTracingDecorator;
 
 
 
 	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize) {
 		super(corePoolSize);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 
@@ -37,25 +38,25 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
-		wrapper.beforeExecute(task);
+		taskTracingDecorator.beforeExecute(task);
 	}
 
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		wrapper.afterExecute();
+		taskTracingDecorator.afterExecute();
 	}
 
 
 
 	@Override
 	public List<Runnable> shutdownNow() {
-		return wrapper.shutdownNow();
+		return taskTracingDecorator.shutdownNow();
 	}
 
 	@Override
 	public Optional<ForcedShutdownAftermath> getForcedShutdownAftermath() {
-		return wrapper.getForcedShutdownAftermath();
+		return taskTracingDecorator.getForcedShutdownAftermath();
 	}
 
 	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
@@ -148,18 +149,21 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
 		super(corePoolSize, threadFactory);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public ScheduledTaskTracingThreadPoolExecutor(
 			int corePoolSize, RejectedExecutionHandler handler) {
 		super(corePoolSize, handler);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public ScheduledTaskTracingThreadPoolExecutor(
 			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
 		super(corePoolSize, threadFactory, handler);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 }

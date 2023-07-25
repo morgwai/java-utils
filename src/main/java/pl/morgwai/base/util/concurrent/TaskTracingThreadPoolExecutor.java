@@ -14,7 +14,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 
 
 
-	final TaskTracingExecutorDecorator wrapper;
+	final TaskTracingExecutorDecorator taskTracingDecorator;
 
 
 
@@ -32,7 +32,8 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			unit,
 			workQueue
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 
@@ -40,25 +41,25 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
-		wrapper.beforeExecute(task);
+		taskTracingDecorator.beforeExecute(task);
 	}
 
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		wrapper.afterExecute();
+		taskTracingDecorator.afterExecute();
 	}
 
 
 
 	@Override
 	public List<Runnable> shutdownNow() {
-		return wrapper.shutdownNow();
+		return taskTracingDecorator.shutdownNow();
 	}
 
 	@Override
 	public Optional<ForcedShutdownAftermath> getForcedShutdownAftermath() {
-		return wrapper.getForcedShutdownAftermath();
+		return taskTracingDecorator.getForcedShutdownAftermath();
 	}
 
 	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
@@ -95,7 +96,8 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			workQueue,
 			threadFactory
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public TaskTracingThreadPoolExecutor(
@@ -114,7 +116,8 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			workQueue,
 			handler
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 
 	public TaskTracingThreadPoolExecutor(
@@ -135,6 +138,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			threadFactory,
 			handler
 		);
-		wrapper = new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator =
+				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
 	}
 }
