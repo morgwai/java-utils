@@ -8,7 +8,15 @@ import java.util.concurrent.*;
 
 
 /**
- * blah
+ * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTracingExecutor}.
+ * <p>
+ * <b>NOTE:</b> due to the design of
+ * {@link ScheduledThreadPoolExecutor#decorateTask(Runnable, RunnableScheduledFuture) task
+ * decorating} in {@link ScheduledThreadPoolExecutor} this class is <i>extremely</i> slow in case of
+ * a large number of very tiny tasks. See
+ * <a href="https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/share/classes/
+ *java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">
+ * the comment with an explanation in the source</a>.</p>
  */
 public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolExecutor
 		implements TaskTracingExecutor {
@@ -26,11 +34,13 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
+	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
 		wrapper.beforeExecute(task);
 	}
 
+	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
 		wrapper.afterExecute();
@@ -66,21 +76,24 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
+	/** Decorates {@code task} using {@link ScheduledExecution}. */
 	@Override
-	protected <V> RunnableScheduledFuture<V> decorateTask(
+	protected <V> ScheduledExecution<V> decorateTask(
 			Runnable task, RunnableScheduledFuture<V> scheduledExecution) {
 		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
+	/** Decorates {@code task} using {@link ScheduledExecution}. */
 	@Override
-	protected <V> RunnableScheduledFuture<V> decorateTask(
+	protected <V> ScheduledExecution<V> decorateTask(
 			Callable<V> task, RunnableScheduledFuture<V> scheduledExecution) {
 		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
-	/** todo: blah */
+	/** Wraps a {@link RunnableScheduledFuture} to allow to obtain the original scheduled task. */
 	public static class ScheduledExecution<V> implements RunnableScheduledFuture<V> {
 
+		/** The original scheduled task. Either a {@link Runnable} or a {@link Callable}. */
 		public Object getTask() { return task; }
 		final Object task;
 

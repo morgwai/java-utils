@@ -7,7 +7,7 @@ import java.util.concurrent.*;
 
 
 /**
- * blah...
+ * A {@link TaskTracingExecutor} based on a {@link ThreadPoolExecutor}.
  */
 public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements TaskTracingExecutor
 {
@@ -37,11 +37,13 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 
 
 
+	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
 		wrapper.beforeExecute(task);
 	}
 
+	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
 		wrapper.afterExecute();
