@@ -332,9 +332,7 @@ public class AwaitableTest {
 				taskStarted.countDown();
 				try {
 					taskBlockingLatch.await();
-				} catch (InterruptedException expected) {
-					System.out.println("task interrupted");
-				}
+				} catch (InterruptedException expected) {}
 			}
 		);
 
