@@ -6,6 +6,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.junit.*;
+import org.junit.experimental.categories.Category;
+import pl.morgwai.base.util.SlowTests;
 import pl.morgwai.base.util.concurrent.ConcurrentUtils.RunnableCallable;
 
 import static org.junit.Assert.*;
@@ -29,6 +31,7 @@ public abstract class TaskTracingExecutorTest {
 	};
 
 	protected double expectedNoopTaskPerformanceFactor;
+	protected double expected1msTaskPerformanceFactor = 1.015d;
 
 
 
@@ -255,19 +258,26 @@ public abstract class TaskTracingExecutorTest {
 
 
 	@Test
-	public void testNoopTaskPerformance() throws InterruptedException {
-		testPerformance(1_000_000, 0L, expectedNoopTaskPerformanceFactor);
+	public void test100kNoopTasksPerformance() throws InterruptedException {
+		testPerformance(100_000, 0L, expectedNoopTaskPerformanceFactor);
 	}
 
 	@Test
-	public void test1msTaskPerformance() throws InterruptedException {
-		testPerformance(1_000, 1L, 1.1d);  // for 1ms-tasks task-tracing overhead should be
-				// absolutely negligible: 1.1d is a statistical inaccuracy exhibited even between
-				// ThreadPoolExecutor invocations for such a small number of tasks as 1k.
-				// Increasing numberOfTasks to 10k allows to decrease the factor to 1.01d for
-				// TaskTracingThreadPoolExecutor and TaskTracingExecutorDecorator, but then
-				// the tests take too much time (ScheduledTaskTracingThreadPoolExecutorTest needs
-				// 1.03d due to task decorating).
+	@Category({SlowTests.class})
+	public void test10MNoopTasksPerformance() throws InterruptedException {
+		testPerformance(10_000_000, 0L, expectedNoopTaskPerformanceFactor);
+	}
+
+	@Test
+	public void test1k1msTasksPerformance() throws InterruptedException {
+		testPerformance(1_000, 1L, 1.15d);  // 1.15d is a statistical inaccuracy exhibited even
+				// between ThreadPoolExecutor invocations for such a small number of tasks as 1k.
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void test10k1msTasksPerformance() throws InterruptedException {
+		testPerformance(10_000, 1L, expected1msTaskPerformanceFactor);
 	}
 
 	public void testPerformance(
@@ -311,7 +321,7 @@ public abstract class TaskTracingExecutorTest {
 		});
 		executor.shutdown();
 		assertTrue("executor should terminate in a reasonable time",
-				executor.awaitTermination(60L, TimeUnit.SECONDS));
+				executor.awaitTermination(100L, TimeUnit.SECONDS));
 		final var durationMillis = System.currentTimeMillis() - startMillis;
 		if (log.isLoggable(Level.INFO)) {
 			log.info((numberOfTasks / 1000) + "k of " + taskDurationMillis + "ms-tasks on "

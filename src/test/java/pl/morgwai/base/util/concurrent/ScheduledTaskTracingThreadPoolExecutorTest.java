@@ -24,6 +24,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingExecu
 	{
 		scheduler = new ScheduledTaskTracingThreadPoolExecutor(threadPoolSize);
 		expectedNoopTaskPerformanceFactor = 10.0d;
+		expected1msTaskPerformanceFactor = 1.03d;
 		return scheduler;
 	}
 

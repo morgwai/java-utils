@@ -8,6 +8,8 @@ import java.util.logging.*;
 
 import com.google.common.collect.Comparators;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
+import pl.morgwai.base.util.SlowTests;
 import pl.morgwai.base.util.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
 
 import static org.junit.Assert.*;
@@ -82,13 +84,25 @@ public class OrderedConcurrentOutputBufferTest {
 
 
 	@Test
-	public void test1000Threads1000MessagesPerThread() throws InterruptedException {
-		testSeveralThreads(1000, 1000, 1000, 1000, 0, 0, 1000, 1000, 10);
+	public void test500Threads1000MessagesPerThread() throws InterruptedException {
+		testSeveralThreads(500, 1000, 1000, 1000, 0, 0, 1000, 1000, 10);
 	}
 
 	@Test
-	public void test1000Threads1MessagePerThread() throws InterruptedException {
-		testSeveralThreads(1000, 1, 1, 1, 1, 0);
+	public void test500Threads1MessagePerThread() throws InterruptedException {
+		testSeveralThreads(500, 1, 1, 1, 1, 0);
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void test10kThreads1000MessagesPerThread() throws InterruptedException {
+		testSeveralThreads(10_000, 1000, 100, 1000, 0, 0, 1000, 1000, 10);
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void test10kThreads1MessagePerThread() throws InterruptedException {
+		testSeveralThreads(10_000, 1, 1, 1, 1, 0);
 	}
 
 	/**
@@ -145,8 +159,19 @@ public class OrderedConcurrentOutputBufferTest {
 
 	@Test
 	public void testSignalConcurrentlyWithFlushingLastBucket() throws InterruptedException {
+		testSignalConcurrentlyWithFlushingLastBucket(1000);
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void testSignalConcurrentlyWithFlushingLastBucket50kTries() throws InterruptedException {
+		testSignalConcurrentlyWithFlushingLastBucket(50_000);
+	}
+
+	public void testSignalConcurrentlyWithFlushingLastBucket(int numberOfTries)
+			throws InterruptedException {
 		// tries to trigger a race condition that was causing output to be closed 2 times
-		for (int i = 0; i < 5000; i++) {
+		for (int i = 0; i < numberOfTries; i++) {
 			setup();
 			var bucket = buffer.addBucket();
 			var t1 = new Thread(bucket::close);
@@ -165,8 +190,20 @@ public class OrderedConcurrentOutputBufferTest {
 	@Test
 	public void testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets()
 			throws InterruptedException {
+		testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets(1000);
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets50kTries()
+			throws InterruptedException {
+		testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets(50_000);
+	}
+
+	public void testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets(int numberOfTries)
+			throws InterruptedException {
 		// tries to trigger a race condition that was suppressing flushing sequence
-		for (int i = 0; i < 5000; i++) {
+		for (int i = 0; i < numberOfTries; i++) {
 			setup();
 			var bucket1 = buffer.addBucket();
 			var bucket2 = buffer.addBucket();
@@ -196,8 +233,20 @@ public class OrderedConcurrentOutputBufferTest {
 	@Test
 	public void testAddBucketAndSignalWhileClosingTail()
 			throws Throwable {
+		testAddBucketAndSignalWhileClosingTail(1000);
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void testAddBucketAndSignalWhileClosingTail20kTries()
+			throws Throwable {
+		testAddBucketAndSignalWhileClosingTail(50_000);
+	}
+
+	public void testAddBucketAndSignalWhileClosingTail(int numberOfTries)
+			throws Throwable {
 		// tries to trigger a race condition that was causing output to be closed too early
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < numberOfTries; i++) {
 			setup();
 			final var bucket1 = buffer.addBucket();
 			bucket1.write(new Message(1, 1));
@@ -244,8 +293,20 @@ public class OrderedConcurrentOutputBufferTest {
 	@Test
 	public void testAddBucketAndSignalWhileFlushingTail()
 			throws Throwable {
+		testAddBucketAndSignalWhileFlushingTail(100);
+	}
+
+	@Test
+	@Category({SlowTests.class})
+	public void testAddBucketAndSignalWhileFlushingTail1kTries()
+			throws Throwable {
+		testAddBucketAndSignalWhileFlushingTail(1000);
+	}
+
+	public void testAddBucketAndSignalWhileFlushingTail(int numberOfTries)
+			throws Throwable {
 		// tries to trigger a race condition that was causing output to be closed too early
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < numberOfTries; i++) {
 			setup();
 			final var bucket1 = buffer.addBucket();
 			bucket1.write(new Message(1, 1));
