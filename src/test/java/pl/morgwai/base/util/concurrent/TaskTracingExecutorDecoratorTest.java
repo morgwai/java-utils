@@ -7,7 +7,7 @@ import pl.morgwai.base.util.concurrent.TaskTracingExecutor.TaskTracingExecutorDe
 
 
 
-public class TaskTracingExecutorDecoratorTest extends TaskTracingThreadPoolExecutorTest {
+public class TaskTracingExecutorDecoratorTest extends TaskTracingExecutorTest {
 
 
 
