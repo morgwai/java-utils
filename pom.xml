@@ -70,6 +70,33 @@
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<executions>
+					<execution>
+						<!-- reconfigure the default execution from test phase -->
+						<id>default-test</id>
+						<configuration>
+							<excludedGroups>pl.morgwai.base.util.SlowTests</excludedGroups>
+						</configuration>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+					<execution>
+						<!-- additional execution at the beginning of deploy phase -->
+						<id>pre-deploy-test</id>
+						<phase>deploy</phase>
+						<configuration>
+							<groups>pl.morgwai.base.util.SlowTests</groups>
+						</configuration>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
 				<executions>
 					<execution>
