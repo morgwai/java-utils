@@ -23,10 +23,10 @@ public interface TaskTracingExecutor extends ExecutorService {
 	 * {@link #shutdownNow()} was called most recently together with its returned list of tasks that
 	 * were removed from this executor's queue.
 	 */
-	Optional<ForcedShutdownAftermath> getForcedShutdownAftermath();
+	ForcedTerminateAftermath tryForceTerminate();
 
-	/** Returned by {@link #getForcedShutdownAftermath()}. */
-	class ForcedShutdownAftermath {
+	/** Returned by {@link #tryForceTerminate()}. */
+	class ForcedTerminateAftermath {
 
 		/** List of tasks that were still running during last call to {@link #shutdownNow()}. */
 		public List<Runnable> getRunningTasks() { return runningTasks; }
@@ -36,7 +36,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 		public List<Runnable> getUnexecutedTasks() { return unexecutedTasks; }
 		public final List<Runnable> unexecutedTasks;
 
-		public ForcedShutdownAftermath(List<Runnable> runningTasks, List<Runnable> unexecutedTasks)
+		public ForcedTerminateAftermath(List<Runnable> runningTasks, List<Runnable> unexecutedTasks)
 		{
 			this.runningTasks = runningTasks;
 			this.unexecutedTasks = unexecutedTasks;
@@ -119,26 +119,14 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 
-		ForcedShutdownAftermath aftermath;
-
 		@Override
-		public Optional<ForcedShutdownAftermath> getForcedShutdownAftermath() {
-			return Optional.ofNullable(aftermath);
-		}
-
-		/**
-		 * Stores a {@link ForcedShutdownAftermath} for future use with
-		 * {@link #getForcedShutdownAftermath()} and calls its backing executor.
-		 */
-		@Override
-		public List<Runnable> shutdownNow() {
-			aftermath = new ForcedShutdownAftermath(
+		public ForcedTerminateAftermath tryForceTerminate() {
+			return new ForcedTerminateAftermath(
 				runningTasks.stream()
 					.map((holder) -> holder.task)
 					.collect(Collectors.toList()),
 				unwrapTasks.apply(backingExecutor.shutdownNow())
 			);
-			return aftermath.unexecutedTasks;
 		}
 
 
@@ -217,6 +205,11 @@ public interface TaskTracingExecutor extends ExecutorService {
 		@Override
 		public void shutdown() {
 			backingExecutor.shutdown();
+		}
+
+		@Override
+		public List<Runnable> shutdownNow() {
+			return backingExecutor.shutdownNow();
 		}
 
 		@Override

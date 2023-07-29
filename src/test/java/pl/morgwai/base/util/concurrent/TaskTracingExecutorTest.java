@@ -105,10 +105,7 @@ public abstract class TaskTracingExecutorTest {
 				latchAwaitingTaskExecution.isDone());
 		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
 
-		testSubject.shutdownNow();
-		assertTrue("aftermath data should be present after the forced shutdown",
-				testSubject.getForcedShutdownAftermath().isPresent());
-		final var aftermath = testSubject.getForcedShutdownAftermath().get();
+		final var aftermath = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
 		assertEquals("1 task should be unexecuted in the aftermath",
 				1, aftermath.unexecutedTasks.size());
@@ -183,10 +180,7 @@ public abstract class TaskTracingExecutorTest {
 				latchAwaitingTaskExecution.isDone());
 		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
 
-		testSubject.shutdownNow();
-		assertTrue("aftermath data should be present after the forced shutdown",
-				testSubject.getForcedShutdownAftermath().isPresent());
-		final var aftermath = testSubject.getForcedShutdownAftermath().get();
+		final var aftermath = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
 		assertEquals("1 task should be unexecuted in the aftermath",
 				1, aftermath.unexecutedTasks.size());
@@ -205,8 +199,7 @@ public abstract class TaskTracingExecutorTest {
 		assertFalse("latchAwaitingTaskExecution should not complete even after the forced shutdown",
 				latchAwaitingTaskExecution.isDone());
 
-		testSubject.shutdownNow();
-		final var aftermath2 = testSubject.getForcedShutdownAftermath().get();
+		final var aftermath2 = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath2",
 				1, aftermath2.runningTasks.size());
 		assertTrue("there should be no unexecuted tasks in the aftermath2",

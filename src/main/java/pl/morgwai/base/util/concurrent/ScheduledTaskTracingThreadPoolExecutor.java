@@ -1,8 +1,6 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.util.concurrent;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.*;
 
 
@@ -29,8 +27,7 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize) {
 		super(corePoolSize);
-		taskTracingDecorator =
-				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -50,29 +47,8 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 	@Override
-	public List<Runnable> shutdownNow() {
-		return taskTracingDecorator.shutdownNow();
-	}
-
-	@Override
-	public Optional<ForcedShutdownAftermath> getForcedShutdownAftermath() {
-		return taskTracingDecorator.getForcedShutdownAftermath();
-	}
-
-	class SuperClassWrapper extends AbstractExecutorService implements ExecutorService {
-
-		@Override public List<Runnable> shutdownNow() {
-			return ScheduledTaskTracingThreadPoolExecutor.super.shutdownNow();
-		}
-
-		// all remaining methods throw UnsupportedOperationException
-		@Override public void execute(Runnable task) { throw new UnsupportedOperationException(); }
-		@Override public void shutdown() { throw new UnsupportedOperationException(); }
-		@Override public boolean isShutdown() { throw new UnsupportedOperationException(); }
-		@Override public boolean isTerminated() { throw new UnsupportedOperationException(); }
-		@Override public boolean awaitTermination(long timeout, TimeUnit unit) {
-			throw new UnsupportedOperationException();
-		}
+	public ForcedTerminateAftermath tryForceTerminate() {
+		return taskTracingDecorator.tryForceTerminate();
 	}
 
 
@@ -149,21 +125,18 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
 		super(corePoolSize, threadFactory);
-		taskTracingDecorator =
-				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
 	}
 
 	public ScheduledTaskTracingThreadPoolExecutor(
 			int corePoolSize, RejectedExecutionHandler handler) {
 		super(corePoolSize, handler);
-		taskTracingDecorator =
-				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
 	}
 
 	public ScheduledTaskTracingThreadPoolExecutor(
 			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
 		super(corePoolSize, threadFactory, handler);
-		taskTracingDecorator =
-				new TaskTracingExecutorDecorator(new SuperClassWrapper(), false, corePoolSize);
+		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
 	}
 }

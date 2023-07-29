@@ -81,10 +81,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingExecu
 		assertFalse("scheduledExecution should not complete",
 				scheduledExecution.isDone());
 
-		testSubject.shutdownNow();
-		assertTrue("aftermath data should be present after the forced shutdown",
-				testSubject.getForcedShutdownAftermath().isPresent());
-		final var aftermath = testSubject.getForcedShutdownAftermath().get();
+		final var aftermath = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
 		assertSame("runningTask should be wrapping scheduledTask", scheduledTask, runningTask);
@@ -133,10 +130,7 @@ public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingExecu
 		assertFalse("scheduledExecution should not complete",
 				scheduledExecution.isDone());
 
-		testSubject.shutdownNow();
-		assertTrue("aftermath data should be present after the forced shutdown",
-				testSubject.getForcedShutdownAftermath().isPresent());
-		final var aftermath = testSubject.getForcedShutdownAftermath().get();
+		final var aftermath = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
 		assertSame("runningTask should be wrapping scheduledTask", scheduledTask, runningTask);
