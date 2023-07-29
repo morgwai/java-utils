@@ -6,14 +6,14 @@ import java.util.concurrent.TimeUnit;
 
 
 
-public class TaskTracingThreadPoolExecutorTest extends TaskTracingExecutorTest {
+public class TaskTrackingThreadPoolExecutorTest extends TaskTrackingExecutorTest {
 
 
 
 	@Override
-	protected TaskTracingExecutor createTestSubjectAndFinishSetup(int threadPoolSize, int queueSize)
-	{
-		final var executor = new TaskTracingThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
+	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
+			int threadPoolSize, int queueSize) {
+		final var executor = new TaskTrackingThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
 				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = executor;
 		expectedNoopTaskPerformanceFactor = 1.15d;

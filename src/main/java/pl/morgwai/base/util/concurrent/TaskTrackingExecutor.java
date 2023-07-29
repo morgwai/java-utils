@@ -11,10 +11,10 @@ import java.util.stream.Collectors;
 /**
  * An {@link ExecutorService} that allows to obtain a list of tasks that were still running when
  * {@link #shutdownNow()} was called.
- * @see TaskTracingThreadPoolExecutor
- * @see ScheduledTaskTracingThreadPoolExecutor
+ * @see TaskTrackingThreadPoolExecutor
+ * @see ScheduledTaskTrackingThreadPoolExecutor
  */
-public interface TaskTracingExecutor extends ExecutorService {
+public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
@@ -47,12 +47,12 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 	/**
 	 * A decorator for an {@link ExecutorService} that makes its target a
-	 * {@link TaskTracingExecutor}.
-	 * @see TaskTracingThreadPoolExecutor
-	 * @see ScheduledTaskTracingThreadPoolExecutor
+	 * {@link TaskTrackingExecutor}.
+	 * @see TaskTrackingThreadPoolExecutor
+	 * @see ScheduledTaskTrackingThreadPoolExecutor
 	 */
-	class TaskTracingExecutorDecorator extends AbstractExecutorService
-			implements TaskTracingExecutor {
+	class TaskTrackingExecutorDecorator extends AbstractExecutorService
+			implements TaskTrackingExecutor {
 
 
 
@@ -70,7 +70,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 
 		/** Decorates {@code executorToDecorate}. */
-		public TaskTracingExecutorDecorator(ExecutorService executorToDecorate) {
+		public TaskTrackingExecutorDecorator(ExecutorService executorToDecorate) {
 			this(executorToDecorate, true, 1);
 		}
 
@@ -80,15 +80,15 @@ public interface TaskTracingExecutor extends ExecutorService {
 		 * {@code executorToDecorate}'s {@link RejectedExecutionHandler} receives original tasks
 		 * passed to {@link #execute(Runnable)}.
 		 */
-		public TaskTracingExecutorDecorator(ThreadPoolExecutor executorToDecorate) {
+		public TaskTrackingExecutorDecorator(ThreadPoolExecutor executorToDecorate) {
 			this(executorToDecorate, true, executorToDecorate.getCorePoolSize());
 			decorateRejectedExecutionHandler(executorToDecorate);
 		}
 
 		/**
 		 * Decorates {@code executorToDecorate}. This is a low-level constructor for subclasses of
-		 * various {@link ExecutorService}s, that embed {@link TaskTracingExecutorDecorator} to
-		 * delegate methods to it and thus provide {@link TaskTracingExecutor} API.
+		 * various {@link ExecutorService}s, that embed {@link TaskTrackingExecutorDecorator} to
+		 * delegate methods to it and thus provide {@link TaskTrackingExecutor} API.
 		 * @param executorToDecorate executor to decorate.
 		 * @param delegatingExecute must be {@code true} for executors that delegate
 		 *     {@link #execute(Runnable)} to this decorator, {@code false} for those that use hooks
@@ -96,7 +96,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 		 * @param threadPoolSize size of {@code executorToDecorate}'s threadPool for optimization
 		 *     purposes: will be used a size for internal {@link ConcurrentHashMap}.
 		 */
-		public TaskTracingExecutorDecorator(
+		public TaskTrackingExecutorDecorator(
 				ExecutorService executorToDecorate, boolean delegatingExecute, int threadPoolSize) {
 			runningTasks = ConcurrentHashMap.newKeySet(threadPoolSize);
 			unwrapTasks = delegatingExecute ? UNWRAP_TASKS : Function.identity();
@@ -105,7 +105,7 @@ public interface TaskTracingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executor}'s {@link RejectedExecutionHandler} to unwrap tasks from
-		 * {@link TaskTracingExecutorDecorator}'s internal wrappers.
+		 * {@link TaskTrackingExecutorDecorator}'s internal wrappers.
 		 */
 		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
 			final var originalHandler = executor.getRejectedExecutionHandler();
@@ -138,11 +138,11 @@ public interface TaskTracingExecutor extends ExecutorService {
 		 * Hook to be called by a worker thread right before running {@code task}. This method is
 		 * called automatically by this decorator's {@link #execute(Runnable)} method: it is
 		 * exposed for low-level subclassing of various {@link ExecutorService}s, that embed
-		 * {@link TaskTracingExecutorDecorator} and allow to hook actions before and after task
+		 * {@link TaskTrackingExecutorDecorator} and allow to hook actions before and after task
 		 * executions (such as {@link ThreadPoolExecutor#beforeExecute(Thread, Runnable)} and
 		 * {@link ThreadPoolExecutor#afterExecute(Runnable, Throwable)}) <b>instead</b> of
 		 * delegating its {@link #execute(Runnable)} method to this decorator.
-		 * @see TaskTracingThreadPoolExecutor TaskTracingThreadPoolExecutor for a usage example.
+		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for a usage example.
 		 */
 		public void beforeExecute(Runnable task) {
 			var localHolder = taskHolder.get();

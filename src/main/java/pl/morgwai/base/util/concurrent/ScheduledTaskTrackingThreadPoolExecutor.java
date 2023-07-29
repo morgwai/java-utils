@@ -6,7 +6,7 @@ import java.util.concurrent.*;
 
 
 /**
- * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTracingExecutor}.
+ * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTrackingExecutor}.
  * <p>
  * <b>NOTE:</b> due to the design of
  * {@link ScheduledThreadPoolExecutor#decorateTask(Runnable, RunnableScheduledFuture) task
@@ -16,18 +16,18 @@ import java.util.concurrent.*;
  *java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">
  * the comment with an explanation in the source</a>.</p>
  */
-public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolExecutor
-		implements TaskTracingExecutor {
+public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPoolExecutor
+		implements TaskTrackingExecutor {
 
 
 
-	final TaskTracingExecutorDecorator taskTracingDecorator;
+	final TaskTrackingExecutorDecorator taskTracingDecorator;
 
 
 
-	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize) {
+	public ScheduledTaskTrackingThreadPoolExecutor(int corePoolSize) {
 		super(corePoolSize);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -123,20 +123,20 @@ public class ScheduledTaskTracingThreadPoolExecutor extends ScheduledThreadPoolE
 
 
 
-	public ScheduledTaskTracingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
+	public ScheduledTaskTrackingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
 		super(corePoolSize, threadFactory);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
-	public ScheduledTaskTracingThreadPoolExecutor(
+	public ScheduledTaskTrackingThreadPoolExecutor(
 			int corePoolSize, RejectedExecutionHandler handler) {
 		super(corePoolSize, handler);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
-	public ScheduledTaskTracingThreadPoolExecutor(
+	public ScheduledTaskTrackingThreadPoolExecutor(
 			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
 		super(corePoolSize, threadFactory, handler);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 }

@@ -3,21 +3,21 @@ package pl.morgwai.base.util.concurrent;
 
 import java.util.concurrent.*;
 
-import pl.morgwai.base.util.concurrent.TaskTracingExecutor.TaskTracingExecutorDecorator;
+import pl.morgwai.base.util.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator;
 
 
 
-public class TaskTracingExecutorDecoratorTest extends TaskTracingExecutorTest {
+public class TaskTrackingExecutorDecoratorTest extends TaskTrackingExecutorTest {
 
 
 
 	@Override
-	protected TaskTracingExecutor createTestSubjectAndFinishSetup(int threadPoolSize, int queueSize)
-	{
+	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
+			int threadPoolSize, int queueSize) {
 		final var backingExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
 				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = backingExecutor;
 		expectedNoopTaskPerformanceFactor = 1.3d;
-		return new TaskTracingExecutorDecorator(backingExecutor);
+		return new TaskTrackingExecutorDecorator(backingExecutor);
 	}
 }

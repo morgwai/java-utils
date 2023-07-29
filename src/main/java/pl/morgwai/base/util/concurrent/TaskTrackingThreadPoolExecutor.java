@@ -6,18 +6,18 @@ import java.util.concurrent.*;
 
 
 /**
- * A {@link TaskTracingExecutor} based on a {@link ThreadPoolExecutor}.
+ * A {@link TaskTrackingExecutor} based on a {@link ThreadPoolExecutor}.
  */
-public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements TaskTracingExecutor
-{
+public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
+		implements TaskTrackingExecutor {
 
 
 
-	final TaskTracingExecutorDecorator taskTracingDecorator;
+	final TaskTrackingExecutorDecorator taskTracingDecorator;
 
 
 
-	public TaskTracingThreadPoolExecutor(
+	public TaskTrackingThreadPoolExecutor(
 		int corePoolSize,
 		int maximumPoolSize,
 		long keepAliveTime,
@@ -31,7 +31,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			unit,
 			workQueue
 		);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -57,7 +57,7 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 
 
 
-	public TaskTracingThreadPoolExecutor(
+	public TaskTrackingThreadPoolExecutor(
 		int corePoolSize,
 		int maximumPoolSize,
 		long keepAliveTime,
@@ -73,10 +73,10 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			workQueue,
 			threadFactory
 		);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
-	public TaskTracingThreadPoolExecutor(
+	public TaskTrackingThreadPoolExecutor(
 		int corePoolSize,
 		int maximumPoolSize,
 		long keepAliveTime,
@@ -92,10 +92,10 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			workQueue,
 			handler
 		);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
-	public TaskTracingThreadPoolExecutor(
+	public TaskTrackingThreadPoolExecutor(
 		int corePoolSize,
 		int maximumPoolSize,
 		long keepAliveTime,
@@ -113,6 +113,6 @@ public class TaskTracingThreadPoolExecutor extends ThreadPoolExecutor implements
 			threadFactory,
 			handler
 		);
-		taskTracingDecorator = new TaskTracingExecutorDecorator(this, false, corePoolSize);
+		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 }

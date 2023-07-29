@@ -4,25 +4,25 @@ package pl.morgwai.base.util.concurrent;
 import java.util.concurrent.*;
 
 import org.junit.Test;
-import pl.morgwai.base.util.concurrent.ScheduledTaskTracingThreadPoolExecutor.ScheduledExecution;
+import pl.morgwai.base.util.concurrent.ScheduledTaskTrackingThreadPoolExecutor.ScheduledExecution;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertSame;
 
 
 
-public class ScheduledTaskTracingThreadPoolExecutorTest extends TaskTracingExecutorTest {
+public class ScheduledTaskTrackingThreadPoolExecutorTest extends TaskTrackingExecutorTest {
 
 
 
-	ScheduledTaskTracingThreadPoolExecutor scheduler;  // same as testSubject
+	ScheduledTaskTrackingThreadPoolExecutor scheduler;  // same as testSubject
 
 
 
 	@Override
-	protected TaskTracingExecutor createTestSubjectAndFinishSetup(int threadPoolSize, int queueSize)
-	{
-		scheduler = new ScheduledTaskTracingThreadPoolExecutor(threadPoolSize);
+	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
+			int threadPoolSize, int queueSize) {
+		scheduler = new ScheduledTaskTrackingThreadPoolExecutor(threadPoolSize);
 		expectedNoopTaskPerformanceFactor = 10.0d;
 		expected1msTaskPerformanceFactor = 1.03d;
 		return scheduler;

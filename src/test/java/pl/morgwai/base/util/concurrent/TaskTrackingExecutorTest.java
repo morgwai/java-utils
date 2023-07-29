@@ -15,11 +15,11 @@ import static pl.morgwai.base.util.concurrent.ConcurrentUtils.completableFutureS
 
 
 
-public abstract class TaskTracingExecutorTest {
+public abstract class TaskTrackingExecutorTest {
 
 
 
-	protected TaskTracingExecutor testSubject;
+	protected TaskTrackingExecutor testSubject;
 
 	protected Executor expectedRejectingExecutor;
 	Runnable rejectedTask;
@@ -40,7 +40,7 @@ public abstract class TaskTracingExecutorTest {
 		testSubject = createTestSubjectAndFinishSetup(1, 1);
 	}
 
-	protected abstract TaskTracingExecutor createTestSubjectAndFinishSetup(
+	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
 			int threadPoolSize, int queueSize);
 
 	@After
@@ -50,7 +50,7 @@ public abstract class TaskTracingExecutorTest {
 
 
 
-	/** For {@link ScheduledTaskTracingThreadPoolExecutorTest} */
+	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTest} */
 	protected Object unwrapIfScheduled(Runnable task) {
 		return task;
 	}
@@ -331,13 +331,13 @@ public abstract class TaskTracingExecutorTest {
 	 * {@link #testPerformance(int, long, double)}.
 	 */
 	static Level LOG_LEVEL = Level.WARNING;
-	static final Logger log = Logger.getLogger(TaskTracingExecutorTest.class.getName());
+	static final Logger log = Logger.getLogger(TaskTrackingExecutorTest.class.getName());
 
 	@BeforeClass
 	public static void setupLogging() {
 		try {
 			LOG_LEVEL = Level.parse(System.getProperty(
-					TaskTracingExecutorTest.class.getPackageName() + ".level"));
+					TaskTrackingExecutorTest.class.getPackageName() + ".level"));
 		} catch (Exception ignored) {}
 		log.setLevel(LOG_LEVEL);
 		for (final var handler: Logger.getLogger("").getHandlers()) handler.setLevel(LOG_LEVEL);
