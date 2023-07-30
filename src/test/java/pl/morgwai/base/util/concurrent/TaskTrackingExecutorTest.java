@@ -277,6 +277,19 @@ public abstract class TaskTrackingExecutorTest {
 
 
 	@Test
+	public void testIdleWorkersDoNotAddNullsToRunningTasks() throws InterruptedException {
+		testSubject.execute(() -> {});
+		testSubject.shutdown();
+		assertTrue("executor should terminate",
+				testSubject.awaitTermination(50L, TimeUnit.MILLISECONDS));
+
+		final var aftermath = testSubject.tryForceTerminate();
+		assertTrue("there should be no running tasks", aftermath.getRunningTasks().isEmpty());
+	}
+
+
+
+	@Test
 	public void test100kNoopTasksPerformance() throws InterruptedException {
 		testPerformance(100_000, 0L, expectedNoopTaskPerformanceFactor);
 	}

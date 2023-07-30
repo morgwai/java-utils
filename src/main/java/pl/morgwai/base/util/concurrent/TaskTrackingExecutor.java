@@ -128,6 +128,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			return new ForcedTerminateAftermath(
 				runningTasks.stream()
 					.map((holder) -> holder.task)
+					.filter(Objects::nonNull)
 					.collect(Collectors.toList()),
 				shutdownNow()
 			);
