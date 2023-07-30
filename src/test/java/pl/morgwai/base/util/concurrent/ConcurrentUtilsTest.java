@@ -47,7 +47,7 @@ public class ConcurrentUtilsTest {
 
 
 	@Test
-	public void testCompletableFutureSupplyAsync() throws Exception {
+	public void testCompletableFutureSupplyAsyncReturnsResultOfSuppliedCallable() throws Exception {
 		final var result = "result";
 		final var testTask = new Callable<String>() {
 			@Override public String call() {
@@ -57,34 +57,52 @@ public class ConcurrentUtilsTest {
 				return "testTask";
 			}
 		};
-		final var executor = new TaskCapturingExecutor();
 
-		final var execution = completableFutureSupplyAsync(testTask, executor);
+		final var execution = completableFutureSupplyAsync(
+				testTask, Executors.newSingleThreadExecutor());
 		assertSame("result of execution should be the same as returned by testTask",
 				result, execution.get(50L, TimeUnit.MILLISECONDS));
-		assertTrue("capturedTask should be a RunnableCallable instance",
-				executor.capturedTask instanceof RunnableCallable);
+	}
+
+
+
+	@Test
+	public void testCompletableFutureSupplyAsyncWrapsTasksWithRunnableCallable() throws Exception {
+		final var executor = Executors.newSingleThreadExecutor();
+		final var blockingTaskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
+		completableFutureSupplyAsync(  // make executor's thread busy
+			() -> {
+				blockingTaskStarted.countDown();
+				taskBlockingLatch.await();
+				return "";
+			},
+			executor
+		);
+		final var testTask = new Callable<String>() {
+			@Override public String call() {
+				return "";
+			}
+			@Override public String toString() {
+				return "testTask";
+			}
+		};
+		completableFutureSupplyAsync(testTask, executor);
+		assertTrue("blocking task should start",
+				blockingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
+
+		final var unexecutedTasks = executor.shutdownNow();
+		assertEquals("there should be 1 unexecuted task after shutdownNow()",
+				1, unexecutedTasks.size());
+		assertTrue("unexecutedTask should be a RunnableCallable instance",
+				unexecutedTasks.get(0) instanceof RunnableCallable);
 		@SuppressWarnings("unchecked")
-		final var capturedTask = (RunnableCallable<String>) executor.capturedTask;
-		assertSame("capturedTask should be wrapping testTask",
-				testTask, capturedTask.getWrappedTask());
+		final var unexecutedTask = (RunnableCallable<String>) unexecutedTasks.get(0);
+		assertSame("unexecutedTask should be wrapping testTask",
+				testTask, unexecutedTask.getWrappedTask());
 		assertSame("RunnableCallable should delegate toString to the original task",
-				testTask.toString(), executor.capturedTask.toString());
+				testTask.toString(), unexecutedTask.toString());
 	}
-
-	static class TaskCapturingExecutor extends ThreadPoolExecutor {
-
-		Runnable capturedTask;
-
-		public TaskCapturingExecutor() {
-			super(1, 1, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<>(1));
-		}
-
-		@Override protected void beforeExecute(Thread worker, Runnable task) {
-			capturedTask = task;
-		}
-	}
-
 
 
 
