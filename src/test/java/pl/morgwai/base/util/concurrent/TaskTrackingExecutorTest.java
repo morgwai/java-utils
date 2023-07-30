@@ -71,16 +71,16 @@ public abstract class TaskTrackingExecutorTest {
 
 	@Test
 	public void testStuckCallable() throws InterruptedException {
-		final var latchAwaitingTaskStarted = new CountDownLatch(1);
+		final var blockingTaskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
-		final var latchAwaitingTask = new Callable<>() {
+		final var blockingTask = new Callable<>() {
 			@Override public String call() throws Exception {
-				latchAwaitingTaskStarted.countDown();
+				blockingTaskStarted.countDown();
 				taskBlockingLatch.await();
 				return "";
 			}
 			@Override public String toString() {
-				return "latchAwaitingTask";
+				return "blockingTask";
 			}
 		};
 		final var instantTask = new Callable<>() {
@@ -92,17 +92,17 @@ public abstract class TaskTrackingExecutorTest {
 			}
 		};
 
-		final var latchAwaitingTaskExecution =
-				completableFutureSupplyAsync(latchAwaitingTask, testSubject);
+		final var blockingTaskExecution =
+				completableFutureSupplyAsync(blockingTask, testSubject);
 		final var instantTaskExecution = completableFutureSupplyAsync(instantTask, testSubject);
-		assertTrue("latchAwaitingTask should start",
-				latchAwaitingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
+		assertTrue("blockingTask should start",
+				blockingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
-		assertFalse("latchAwaitingTaskExecution should not complete",
-				latchAwaitingTaskExecution.isDone());
+		assertFalse("blockingTaskExecution should not complete",
+				blockingTaskExecution.isDone());
 		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
@@ -115,18 +115,18 @@ public abstract class TaskTrackingExecutorTest {
 				runningTask instanceof RunnableCallable);
 		assertTrue("unexecutedTask should be a RunnableCallable instance",
 				unexecutedTask instanceof RunnableCallable);
-		assertSame("runningTask should be latchAwaitingTask",
-				latchAwaitingTask, ((RunnableCallable<?>) runningTask).getWrappedTask());
+		assertSame("runningTask should be blockingTask",
+				blockingTask, ((RunnableCallable<?>) runningTask).getWrappedTask());
 		assertSame("unexecutedTask should be instantTask",
 				instantTask, ((RunnableCallable<?>) unexecutedTask).getWrappedTask());
 		try {
-			latchAwaitingTaskExecution.get(20L, TimeUnit.MILLISECONDS);
-			fail("latchAwaitingTaskExecution should complete exceptionally");
+			blockingTaskExecution.get(20L, TimeUnit.MILLISECONDS);
+			fail("blockingTaskExecution should complete exceptionally");
 		} catch (TimeoutException e) {
-			fail("latchAwaitingTaskExecution should complete after the forced shutdown");
+			fail("blockingTaskExecution should complete after the forced shutdown");
 		} catch (ExecutionException e) {
 			assertTrue(
-				"latchAwaitingTask should throw an InterruptedException after forced shutdown",
+				"blockingTask should throw an InterruptedException after forced shutdown",
 				e.getCause() instanceof InterruptedException
 			);
 		}
@@ -140,11 +140,11 @@ public abstract class TaskTrackingExecutorTest {
 	public void testStuckUninterruptibleCallable()
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var result = "result";
-		final var latchAwaitingTaskStarted = new CountDownLatch(1);
+		final var blockingTaskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
-		final var latchAwaitingTask = new Callable<>() {
+		final var blockingTask = new Callable<>() {
 			@Override public String call() {
-				latchAwaitingTaskStarted.countDown();
+				blockingTaskStarted.countDown();
 				boolean blockingLatchSwitched = false;
 				while ( !blockingLatchSwitched) {
 					try {
@@ -155,7 +155,7 @@ public abstract class TaskTrackingExecutorTest {
 				return result;
 			}
 			@Override public String toString() {
-				return "latchAwaitingTask";
+				return "blockingTask";
 			}
 		};
 		final var instantTask = new Callable<>() {
@@ -167,17 +167,17 @@ public abstract class TaskTrackingExecutorTest {
 			}
 		};
 
-		final var latchAwaitingTaskExecution =
-				completableFutureSupplyAsync(latchAwaitingTask, testSubject);
+		final var blockingTaskExecution =
+				completableFutureSupplyAsync(blockingTask, testSubject);
 		final var instantTaskExecution = completableFutureSupplyAsync(instantTask, testSubject);
-		assertTrue("latchAwaitingTask should start",
-				latchAwaitingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
+		assertTrue("blockingTask should start",
+				blockingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
-		assertFalse("latchAwaitingTaskExecution should not complete",
-				latchAwaitingTaskExecution.isDone());
+		assertFalse("blockingTaskExecution should not complete",
+				blockingTaskExecution.isDone());
 		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
@@ -190,14 +190,14 @@ public abstract class TaskTrackingExecutorTest {
 				runningTask instanceof RunnableCallable);
 		assertTrue("unexecutedTask should be a RunnableCallable instance",
 				unexecutedTask instanceof RunnableCallable);
-		assertSame("runningTask should be latchAwaitingTask",
-				latchAwaitingTask, ((RunnableCallable<?>) runningTask).getWrappedTask());
+		assertSame("runningTask should be blockingTask",
+				blockingTask, ((RunnableCallable<?>) runningTask).getWrappedTask());
 		assertSame("unexecutedTask should be instantTask",
 				instantTask, ((RunnableCallable<?>) unexecutedTask).getWrappedTask());
 		assertFalse("executor should not terminate even after the forced shutdown",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
-		assertFalse("latchAwaitingTaskExecution should not complete even after the forced shutdown",
-				latchAwaitingTaskExecution.isDone());
+		assertFalse("blockingTaskExecution should not complete even after the forced shutdown",
+				blockingTaskExecution.isDone());
 
 		final var aftermath2 = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath2",
@@ -207,18 +207,18 @@ public abstract class TaskTrackingExecutorTest {
 		final var runningTask2 = unwrapIfScheduled(aftermath2.runningTasks.get(0));
 		assertTrue("runningTask2 should be a RunnableCallable instance",
 				runningTask2 instanceof RunnableCallable);
-		assertSame("runningTask2 should be latchAwaitingTask",
-				latchAwaitingTask, ((RunnableCallable<?>) runningTask2).getWrappedTask());
+		assertSame("runningTask2 should be blockingTask",
+				blockingTask, ((RunnableCallable<?>) runningTask2).getWrappedTask());
 		assertFalse("executor should not terminate even after the 2nd forced shutdown",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
 		assertFalse(
-			"latchAwaitingTaskExecution should not complete even after the 2nd forced shutdown",
-			latchAwaitingTaskExecution.isDone()
+			"blockingTaskExecution should not complete even after the 2nd forced shutdown",
+			blockingTaskExecution.isDone()
 		);
 
 		taskBlockingLatch.countDown();
-		assertSame("result of latchAwaitingTaskExecution should be the same as returned",
-				result, latchAwaitingTaskExecution.get(20L, TimeUnit.MILLISECONDS));
+		assertSame("result of blockingTaskExecution should be the same as returned",
+				result, blockingTaskExecution.get(20L, TimeUnit.MILLISECONDS));
 		assertTrue("executor should terminate after taskBlockingLatch is switched",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
 	}
@@ -252,11 +252,11 @@ public abstract class TaskTrackingExecutorTest {
 
 	@Test
 	public void testShutdownNowUnwrapsTasks() throws InterruptedException {
-		final var latchAwaitingTaskStarted = new CountDownLatch(1);
+		final var blockingTaskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
 		testSubject.execute(  // make executor's thread busy
 			() -> {
-				latchAwaitingTaskStarted.countDown();
+				blockingTaskStarted.countDown();
 				try {
 					taskBlockingLatch.await();
 				} catch (InterruptedException ignored) {}
@@ -265,7 +265,7 @@ public abstract class TaskTrackingExecutorTest {
 		final Runnable queuedTask = () -> {};
 		testSubject.execute(queuedTask);
 		assertTrue("blocking task should start",
-				latchAwaitingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
+				blockingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
 
 		final var unexecutedTasks = testSubject.shutdownNow();
 		assertEquals("there should be 1 unexecuted task after shutdownNow()",
