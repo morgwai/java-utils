@@ -251,6 +251,32 @@ public abstract class TaskTrackingExecutorTest {
 
 
 	@Test
+	public void testShutdownNowUnwrapsTasks() throws InterruptedException {
+		final var latchAwaitingTaskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
+		testSubject.execute(  // make executor's thread busy
+			() -> {
+				latchAwaitingTaskStarted.countDown();
+				try {
+					taskBlockingLatch.await();
+				} catch (InterruptedException ignored) {}
+			}
+		);
+		final Runnable queuedTask = () -> {};
+		testSubject.execute(queuedTask);
+		assertTrue("blocking task should start",
+				latchAwaitingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
+
+		final var unexecutedTasks = testSubject.shutdownNow();
+		assertEquals("there should be 1 unexecuted task after shutdownNow()",
+				1, unexecutedTasks.size());
+		assertSame("unexecuted task should be queuedTask",
+				queuedTask, unwrapIfScheduled(unexecutedTasks.get(0)));
+	}
+
+
+
+	@Test
 	public void test100kNoopTasksPerformance() throws InterruptedException {
 		testPerformance(100_000, 0L, expectedNoopTaskPerformanceFactor);
 	}

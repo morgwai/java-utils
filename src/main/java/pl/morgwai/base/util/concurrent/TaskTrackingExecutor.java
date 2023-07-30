@@ -129,10 +129,14 @@ public interface TaskTrackingExecutor extends ExecutorService {
 				runningTasks.stream()
 					.map((holder) -> holder.task)
 					.collect(Collectors.toList()),
-				unwrapTasks.apply(backingExecutor.shutdownNow())
+				shutdownNow()
 			);
 		}
 
+		@Override
+		public List<Runnable> shutdownNow() {
+			return unwrapTasks.apply(backingExecutor.shutdownNow());
+		}
 
 
 
@@ -209,11 +213,6 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		@Override
 		public void shutdown() {
 			backingExecutor.shutdown();
-		}
-
-		@Override
-		public List<Runnable> shutdownNow() {
-			return backingExecutor.shutdownNow();
 		}
 
 		@Override
