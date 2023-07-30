@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 
 /**
  * An {@link ExecutorService} that allows to obtain a list of tasks that were still running when
- * {@link #shutdownNow()} was called.
+ * an {@link #tryForceTerminate() attempt to force terminate} was made.
  * @see TaskTrackingThreadPoolExecutor
  * @see ScheduledTaskTrackingThreadPoolExecutor
  */
@@ -19,20 +19,20 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 	/**
-	 * Returns an object containing a list of tasks that that were still running when
-	 * {@link #shutdownNow()} was called most recently together with its returned list of tasks that
-	 * were removed from this executor's queue.
+	 * Calls {@link #shutdownNow()} and returns an object containing a list of tasks that that were
+	 * still running when this method was called together with the list of tasks that were removed
+	 * from this executor's queue as returned by {@link #shutdownNow()}.
 	 */
 	ForcedTerminateAftermath tryForceTerminate();
 
 	/** Returned by {@link #tryForceTerminate()}. */
 	class ForcedTerminateAftermath {
 
-		/** List of tasks that were still running during last call to {@link #shutdownNow()}. */
+		/** List of tasks that were still running when {@link #tryForceTerminate()} was called. */
 		public List<Runnable> getRunningTasks() { return runningTasks; }
 		public final List<Runnable> runningTasks;
 
-		/** Result of the most recent {@link ExecutorService#shutdownNow()} call. */
+		/** List of tasks returned by {@link #shutdownNow()}. */
 		public List<Runnable> getUnexecutedTasks() { return unexecutedTasks; }
 		public final List<Runnable> unexecutedTasks;
 
@@ -76,9 +76,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executorToDecorate} and calls
-		 * {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)} to ensure that
-		 * {@code executorToDecorate}'s {@link RejectedExecutionHandler} receives original tasks
-		 * passed to {@link #execute(Runnable)}.
+		 * {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)
+		 * decorateRejectedExecutionHandler(executorToDecorate)}.
 		 */
 		public TaskTrackingExecutorDecorator(ThreadPoolExecutor executorToDecorate) {
 			this(executorToDecorate, true, executorToDecorate.getCorePoolSize());
@@ -91,10 +90,14 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * delegate methods to it and thus provide {@link TaskTrackingExecutor} API.
 		 * @param executorToDecorate executor to decorate.
 		 * @param delegatingExecute must be {@code true} for executors that delegate
-		 *     {@link #execute(Runnable)} to this decorator, {@code false} for those that use hooks
-		 *     instead.
+		 *     {@link #execute(Runnable)} to this decorator, {@code false} for those that use
+		 *     execution hooks ({@link #beforeExecute(Runnable)}, {@link #afterExecute()}) directly
+		 *     instead. If set to {@code true} tasks returned by {@link #shutdownNow()} will be
+		 *     mapped to remove their wrapping decorators created internally by
+		 *     {@link #execute(Runnable)}.
 		 * @param threadPoolSize size of {@code executorToDecorate}'s threadPool for optimization
 		 *     purposes: will be used a size for internal {@link ConcurrentHashMap}.
+		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for usage example.
 		 */
 		public TaskTrackingExecutorDecorator(
 				ExecutorService executorToDecorate, boolean delegatingExecute, int threadPoolSize) {
@@ -105,7 +108,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executor}'s {@link RejectedExecutionHandler} to unwrap tasks from
-		 * {@link TaskTrackingExecutorDecorator}'s internal wrappers.
+		 * {@link TaskTrackingExecutorDecorator}'s internal wrappers before passing them to the
+		 * original handler.
 		 */
 		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
 			final var originalHandler = executor.getRejectedExecutionHandler();

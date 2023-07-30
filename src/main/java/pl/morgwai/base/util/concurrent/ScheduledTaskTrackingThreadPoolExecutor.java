@@ -67,7 +67,9 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
-	/** Wraps a {@link RunnableScheduledFuture} to allow to obtain the original scheduled task. */
+	/**
+	 * Decorates a {@link RunnableScheduledFuture} to allow to obtain the original scheduled task.
+	 */
 	public static class ScheduledExecution<V> implements RunnableScheduledFuture<V> {
 
 		/** The original scheduled task. Either a {@link Runnable} or a {@link Callable}. */
@@ -76,9 +78,9 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 		final RunnableScheduledFuture<V> wrappedScheduledItem;
 
-		public ScheduledExecution(Object task, RunnableScheduledFuture<V> itemToWrap) {
+		public ScheduledExecution(Object task, RunnableScheduledFuture<V> scheduledItemToWrap) {
 			this.task = task;
-			this.wrappedScheduledItem = itemToWrap;
+			this.wrappedScheduledItem = scheduledItemToWrap;
 		}
 
 		// only dumb delegations to wrappedScheduledItem below
