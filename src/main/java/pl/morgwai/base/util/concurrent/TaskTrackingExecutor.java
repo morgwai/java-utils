@@ -64,7 +64,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
 		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
 				(tasks) -> tasks.stream()
-					.map(task -> ((TaskWrapper) task).wrappedTask)
+					.map(task -> ((TaskDecorator) task).wrappedTask)
 					.collect(Collectors.toList());
 
 
@@ -115,7 +115,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			final var originalHandler = executor.getRejectedExecutionHandler();
 			executor.setRejectedExecutionHandler(
 				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
-					((TaskWrapper) wrappedTask).wrappedTask,
+					((TaskDecorator) wrappedTask).wrappedTask,
 					rejectingExecutor
 				)
 			);
@@ -174,21 +174,22 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/**
-		 * Wraps {@code task} with a decorator that automatically calls
-		 * {@link #beforeExecute(Runnable)} and {@link #afterExecute()} and passes it to its backing
-		 * executor.
-		 */
+		/** Wraps {@code task} with a {@link TaskDecorator} and passes it its backing executor. */
 		@Override
 		public void execute(Runnable task) {
-			backingExecutor.execute(new TaskWrapper(task));
+			backingExecutor.execute(new TaskDecorator(task));
 		}
 
-		protected class TaskWrapper implements Runnable {
+		/**
+		 * A decorator that automatically calls {@link #beforeExecute(Runnable)} and
+		 * {@link #afterExecute()}.
+		 */
+		public class TaskDecorator implements Runnable {
 
+			public Runnable getWrappedTask() { return wrappedTask; }
 			final Runnable wrappedTask;
 
-			protected TaskWrapper(Runnable taskToWrap) {
+			protected TaskDecorator(Runnable taskToWrap) {
 				wrappedTask = taskToWrap;
 			}
 
@@ -204,6 +205,15 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			@Override public String toString() {
 				return  wrappedTask.toString();
 			}
+		}
+
+		/**
+		 * If {@code task} is an instance of {@link TaskDecorator} returns
+		 * {@link TaskDecorator#getWrappedTask() task.getWrappedTask()}, otherwise just
+		 * {@code task}.
+		 */
+		public static Runnable unwrapTask(Runnable task) {
+			return task instanceof TaskDecorator ? ((TaskDecorator) task).wrappedTask : task;
 		}
 
 
