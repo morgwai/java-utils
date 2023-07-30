@@ -21,24 +21,26 @@ public interface ConcurrentUtils {
 	 * {@link CompletableFuture#whenComplete(BiConsumer) whenComplete(...)} /
 	 * {@link CompletableFuture#exceptionally(Function) exceptionally(...)} chained calls.
 	 * <p>
-	 * In case {@code executor} rejects {@code task}, its {@link RejectedExecutionHandler} will
-	 * receive {@code task} wrapped with a {@link RunnableCallable}.</p>
+	 * Internally {@code task} is wrapped with a {@link RunnableCallable}, so in case
+	 * {@code executor} rejects {@code task} or {@link ExecutorService#shutdownNow()
+	 * executor.shutdownNow()} is called, {@link RunnableCallable#getWrappedTask()} can be used to
+	 * obtain the original.</p>
 	 */
 	static <T> CompletableFuture<T> completableFutureSupplyAsync(
 		Callable<T> task,
 		Executor executor
 	) {
-		final var result = new CompletableFuture<T>();
+		final var execution = new CompletableFuture<T>();
 		executor.execute(new RunnableCallable<>(task) {
 			@Override public void run() {
 				try {
-					result.complete(wrappedTask.call());
+					execution.complete(wrappedTask.call());
 				} catch (Exception e) {
-					result.completeExceptionally(e);
+					execution.completeExceptionally(e);
 				}
 			}
 		});
-		return result;
+		return execution;
 	}
 
 	/**
