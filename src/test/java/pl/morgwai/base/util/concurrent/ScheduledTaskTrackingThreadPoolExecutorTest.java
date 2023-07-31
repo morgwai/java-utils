@@ -49,7 +49,6 @@ public class ScheduledTaskTrackingThreadPoolExecutorTest extends TaskTrackingExe
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var numberOfUnblockedRuns = 2;
 		final var taskEnteredTheBlockingCycle = new CountDownLatch(1);
-		final var taskBlockingLatch = new CountDownLatch(1);
 		final var scheduledTask = new Runnable() {
 
 			int count = 0;
@@ -101,7 +100,6 @@ public class ScheduledTaskTrackingThreadPoolExecutorTest extends TaskTrackingExe
 	public void testStuckScheduledCallable()
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var taskStarted = new CountDownLatch(1);
-		final var taskBlockingLatch = new CountDownLatch(1);
 		final var result = "result";
 		final var scheduledTask = new Callable<String>() {
 

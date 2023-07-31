@@ -21,6 +21,8 @@ public abstract class TaskTrackingExecutorTest {
 
 	protected TaskTrackingExecutor testSubject;
 
+	protected CountDownLatch taskBlockingLatch;
+
 	protected Executor expectedRejectingExecutor;
 	Runnable rejectedTask;
 	Executor rejectingExecutor;
@@ -37,6 +39,7 @@ public abstract class TaskTrackingExecutorTest {
 
 	@Before
 	public void setup() {
+		taskBlockingLatch = new CountDownLatch(1);
 		testSubject = createTestSubjectAndFinishSetup(1, 1);
 	}
 
@@ -44,8 +47,15 @@ public abstract class TaskTrackingExecutorTest {
 			int threadPoolSize, int queueSize);
 
 	@After
-	public void shutdownNowIfNeeded() {
-		if ( !testSubject.isTerminated()) testSubject.shutdownNow();
+	public void tryTerminate() {
+		testSubject.shutdown();
+		taskBlockingLatch.countDown();
+		try {
+			testSubject.awaitTermination(50L, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException ignored) {
+		} finally {
+			if ( !testSubject.isTerminated()) testSubject.shutdownNow();
+		}
 	}
 
 
@@ -72,7 +82,6 @@ public abstract class TaskTrackingExecutorTest {
 	@Test
 	public void testStuckCallable() throws InterruptedException {
 		final var blockingTaskStarted = new CountDownLatch(1);
-		final var taskBlockingLatch = new CountDownLatch(1);
 		final var blockingTask = new Callable<>() {
 			@Override public String call() throws Exception {
 				blockingTaskStarted.countDown();
@@ -141,7 +150,6 @@ public abstract class TaskTrackingExecutorTest {
 			throws InterruptedException, ExecutionException, TimeoutException {
 		final var result = "result";
 		final var blockingTaskStarted = new CountDownLatch(1);
-		final var taskBlockingLatch = new CountDownLatch(1);
 		final var blockingTask = new Callable<>() {
 			@Override public String call() {
 				blockingTaskStarted.countDown();
@@ -227,7 +235,6 @@ public abstract class TaskTrackingExecutorTest {
 
 	@Test
 	public void testExecutionRejection() {
-		final var taskBlockingLatch = new CountDownLatch(1);
 		testSubject.execute(  // make executor's thread busy
 			() -> {
 				try {
@@ -253,7 +260,6 @@ public abstract class TaskTrackingExecutorTest {
 	@Test
 	public void testShutdownNowUnwrapsTasks() throws InterruptedException {
 		final var blockingTaskStarted = new CountDownLatch(1);
-		final var taskBlockingLatch = new CountDownLatch(1);
 		testSubject.execute(  // make executor's thread busy
 			() -> {
 				blockingTaskStarted.countDown();
