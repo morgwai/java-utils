@@ -242,10 +242,10 @@ public abstract class TaskTrackingExecutorTest {
 			testSubject.execute(overloadingTask);
 			fail("overloaded executor should throw a RejectedExecutionException");
 		} catch (RejectedExecutionException expected) {}
+		taskBlockingLatch.countDown();
 		assertSame("rejectingExecutor should be expectedRejectingExecutor",
 				expectedRejectingExecutor, rejectingExecutor);
 		assertSame("rejectedTask should be overloadingTask", overloadingTask, rejectedTask);
-		taskBlockingLatch.countDown();
 	}
 
 
