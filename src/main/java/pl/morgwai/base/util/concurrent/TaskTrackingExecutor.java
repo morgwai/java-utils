@@ -89,15 +89,15 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * various {@link ExecutorService}s, that embed {@link TaskTrackingExecutorDecorator} to
 		 * delegate methods to it and thus provide {@link TaskTrackingExecutor} API.
 		 * @param executorToDecorate executor to decorate.
-		 * @param delegatingExecute must be {@code true} for executors that delegate
+		 * @param delegatingExecute should be {@code true} for executors that delegate
 		 *     {@link #execute(Runnable)} to this decorator, {@code false} for those that use
-		 *     execution hooks ({@link #beforeExecute(Runnable)}, {@link #afterExecute()}) directly
-		 *     instead. If set to {@code true} tasks returned by {@link #shutdownNow()} will be
-		 *     mapped to remove their wrapping decorators created internally by
-		 *     {@link #execute(Runnable)}.
+		 *     execution hooks ({@link #storeTaskIntoHolderBeforeExecute(Runnable)},
+		 *     {@link #clearTaskHolderAfterExecute()}) directly instead. If set to {@code true},
+		 *     tasks returned by {@link #shutdownNow()} will be mapped to remove their wrapping
+		 *     {@link TaskDecorator} created by {@link #execute(Runnable)}.
 		 * @param threadPoolSize size of {@code executorToDecorate}'s threadPool for optimization
-		 *     purposes: will be used a size for internal {@link ConcurrentHashMap}.
-		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for usage example.
+		 *     purposes: will be used as an initial size for an internal {@link ConcurrentHashMap}.
+		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for a usage example.
 		 */
 		public TaskTrackingExecutorDecorator(
 				ExecutorService executorToDecorate, boolean delegatingExecute, int threadPoolSize) {
@@ -108,8 +108,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executor}'s {@link RejectedExecutionHandler} to unwrap tasks from
-		 * {@link TaskTrackingExecutorDecorator}'s internal wrappers before passing them to the
-		 * original handler.
+		 * {@link TaskDecorator} before passing them to the original handler.
 		 */
 		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
 			final var originalHandler = executor.getRejectedExecutionHandler();
@@ -153,7 +152,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * delegating its {@link #execute(Runnable)} method to this decorator.
 		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for a usage example.
 		 */
-		public void beforeExecute(Runnable task) {
+		public void storeTaskIntoHolderBeforeExecute(Runnable task) {
 			var localHolder = taskHolder.get();
 			if (localHolder == null) {
 				localHolder = new TaskHolder();
@@ -167,9 +166,9 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * Hook to be called by a worker thread right after running a task. This method is
 		 * called automatically by this decorator's {@link #execute(Runnable)} method: it is
 		 * exposed for low-level subclassing of various {@link ExecutorService}s.
-		 * @see #beforeExecute(Runnable)
+		 * @see #storeTaskIntoHolderBeforeExecute(Runnable)
 		 */
-		public void afterExecute() {
+		public void clearTaskHolderAfterExecute() {
 			taskHolder.get().task = null;
 		}
 
@@ -182,8 +181,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		}
 
 		/**
-		 * A decorator that automatically calls {@link #beforeExecute(Runnable)} and
-		 * {@link #afterExecute()}.
+		 * A decorator that automatically calls {@link #storeTaskIntoHolderBeforeExecute(Runnable)}
+		 * and {@link #clearTaskHolderAfterExecute()}.
 		 */
 		public class TaskDecorator implements Runnable {
 
@@ -195,11 +194,11 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			}
 
 			@Override public void run() {
-				beforeExecute(wrappedTask);
+				storeTaskIntoHolderBeforeExecute(wrappedTask);
 				try {
 					wrappedTask.run();
 				} finally {
-					afterExecute();
+					clearTaskHolderAfterExecute();
 				}
 			}
 

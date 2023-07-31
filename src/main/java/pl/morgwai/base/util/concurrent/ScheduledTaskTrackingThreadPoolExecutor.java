@@ -35,13 +35,13 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
-		taskTracingDecorator.beforeExecute(task);
+		taskTracingDecorator.storeTaskIntoHolderBeforeExecute(task);
 	}
 
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		taskTracingDecorator.afterExecute();
+		taskTracingDecorator.clearTaskHolderAfterExecute();
 	}
 
 
