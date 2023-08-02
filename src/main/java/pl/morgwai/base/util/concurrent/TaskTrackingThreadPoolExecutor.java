@@ -51,7 +51,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 
 
 	@Override
-	public ForcedTerminateAftermath tryForceTerminate() {
+	public ForcedTerminationAftermath tryForceTerminate() {
 		return taskTracingDecorator.tryForceTerminate();
 	}
 

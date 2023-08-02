@@ -23,10 +23,10 @@ public interface TaskTrackingExecutor extends ExecutorService {
 	 * still running when this method was called together with the list of tasks that were removed
 	 * from this executor's queue as returned by {@link #shutdownNow()}.
 	 */
-	ForcedTerminateAftermath tryForceTerminate();
+	ForcedTerminationAftermath tryForceTerminate();
 
 	/** Returned by {@link #tryForceTerminate()}. */
-	class ForcedTerminateAftermath {
+	class ForcedTerminationAftermath {
 
 		/** List of tasks that were still running when {@link #tryForceTerminate()} was called. */
 		public List<Runnable> getRunningTasks() { return runningTasks; }
@@ -36,8 +36,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		public List<Runnable> getUnexecutedTasks() { return unexecutedTasks; }
 		public final List<Runnable> unexecutedTasks;
 
-		public ForcedTerminateAftermath(List<Runnable> runningTasks, List<Runnable> unexecutedTasks)
-		{
+		public ForcedTerminationAftermath(
+				List<Runnable> runningTasks, List<Runnable> unexecutedTasks) {
 			this.runningTasks = runningTasks;
 			this.unexecutedTasks = unexecutedTasks;
 		}
@@ -137,8 +137,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		@Override
-		public ForcedTerminateAftermath tryForceTerminate() {
-			return new ForcedTerminateAftermath(
+		public ForcedTerminationAftermath tryForceTerminate() {
+			return new ForcedTerminationAftermath(
 				runningTasks.stream()
 					.map((holder) -> holder.task)
 					.filter(Objects::nonNull)

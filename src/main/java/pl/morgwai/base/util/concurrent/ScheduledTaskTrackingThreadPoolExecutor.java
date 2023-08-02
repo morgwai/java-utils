@@ -47,7 +47,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 
 	@Override
-	public ForcedTerminateAftermath tryForceTerminate() {
+	public ForcedTerminationAftermath tryForceTerminate() {
 		return taskTracingDecorator.tryForceTerminate();
 	}
 
