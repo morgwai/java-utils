@@ -45,6 +45,20 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
+	default Awaitable.WithUnit toAwaitableOfTermination() {
+		return Awaitable.ofTermination(this);
+	}
+
+	default Awaitable.WithUnit toAwaitableOfEnforcedTermination() {
+		return Awaitable.ofEnforcedTermination(this);
+	}
+
+	default void awaitTermination() throws InterruptedException {
+		while ( !awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS));
+	}
+
+
+
 	/**
 	 * A decorator for an {@link ExecutorService} that makes its target a
 	 * {@link TaskTrackingExecutor}.
