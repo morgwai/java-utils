@@ -78,7 +78,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
 		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
 				(tasks) -> tasks.stream()
-					.map(task -> ((TaskDecorator) task).wrappedTask)
+					.map(task -> ((TrackableTask) task).wrappedTask)
 					.collect(Collectors.toList());
 
 
@@ -108,7 +108,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 *     execution hooks ({@link #storeTaskIntoHolderBeforeExecute(Runnable)},
 		 *     {@link #clearTaskHolderAfterExecute()}) directly instead. If set to {@code true},
 		 *     tasks returned by {@link #shutdownNow()} will be mapped to remove their wrapping
-		 *     {@link TaskDecorator} created by {@link #execute(Runnable)}.
+		 *     {@link TrackableTask} created by {@link #execute(Runnable)}.
 		 * @param threadPoolSize size of {@code executorToDecorate}'s threadPool for optimization
 		 *     purposes: will be used as an initial size for an internal {@link ConcurrentHashMap}.
 		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for a usage example.
@@ -122,13 +122,13 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executor}'s {@link RejectedExecutionHandler} to unwrap tasks from
-		 * {@link TaskDecorator} before passing them to the original handler.
+		 * {@link TrackableTask} before passing them to the original handler.
 		 */
 		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
 			final var originalHandler = executor.getRejectedExecutionHandler();
 			executor.setRejectedExecutionHandler(
 				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
-					((TaskDecorator) wrappedTask).wrappedTask,
+					((TrackableTask) wrappedTask).wrappedTask,
 					rejectingExecutor
 				)
 			);
@@ -188,22 +188,22 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/** Wraps {@code task} with a {@link TaskDecorator} and passes it its backing executor. */
+		/** Wraps {@code task} with a {@link TrackableTask} and passes it to its backing executor.*/
 		@Override
 		public void execute(Runnable task) {
-			backingExecutor.execute(new TaskDecorator(task));
+			backingExecutor.execute(new TrackableTask(task));
 		}
 
 		/**
 		 * A decorator that automatically calls {@link #storeTaskIntoHolderBeforeExecute(Runnable)}
 		 * and {@link #clearTaskHolderAfterExecute()}.
 		 */
-		public class TaskDecorator implements Runnable {
+		public class TrackableTask implements Runnable {
 
 			public Runnable getWrappedTask() { return wrappedTask; }
 			final Runnable wrappedTask;
 
-			protected TaskDecorator(Runnable taskToWrap) {
+			protected TrackableTask(Runnable taskToWrap) {
 				wrappedTask = taskToWrap;
 			}
 
@@ -222,12 +222,12 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		}
 
 		/**
-		 * If {@code task} is an instance of {@link TaskDecorator} returns
-		 * {@link TaskDecorator#getWrappedTask() task.getWrappedTask()}, otherwise just
+		 * If {@code task} is an instance of {@link TrackableTask} returns
+		 * {@link TrackableTask#getWrappedTask() task.getWrappedTask()}, otherwise just
 		 * {@code task}.
 		 */
 		public static Runnable unwrapTask(Runnable task) {
-			return task instanceof TaskDecorator ? ((TaskDecorator) task).wrappedTask : task;
+			return task instanceof TrackableTask ? ((TrackableTask) task).wrappedTask : task;
 		}
 
 
