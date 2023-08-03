@@ -6,11 +6,12 @@ import java.util.concurrent.*;
 
 
 /**
- * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTrackingExecutor}.
+ * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTrackingExecutor}. Decorates
+ * scheduled items with {@link ScheduledExecution}, so that the original task can be obtained.
  * <p>
  * <b>NOTE:</b> due to the design of
  * {@link ScheduledThreadPoolExecutor#decorateTask(Runnable, RunnableScheduledFuture) task
- * decorating} in {@link ScheduledThreadPoolExecutor} this class is <i>extremely</i> slow in case of
+ * decorating in ScheduledThreadPoolExecutor} this class is <i>extremely</i> slow in case of
  * a large number of very tiny tasks. See
  * <a href="https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/share/classes/
  *java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">

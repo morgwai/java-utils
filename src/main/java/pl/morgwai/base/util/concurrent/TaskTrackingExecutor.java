@@ -19,9 +19,9 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 	/**
-	 * Calls {@link #shutdownNow()} and returns an object containing a list of tasks that that were
-	 * still running when this method was called together with the list of tasks that were removed
-	 * from this executor's queue as returned by {@link #shutdownNow()}.
+	 * Calls {@link #shutdownNow()} and returns an object containing a list of tasks that were still
+	 * running when this method was called, together with the list of tasks returned by
+	 * {@link #shutdownNow()}.
 	 */
 	ForcedTerminationAftermath tryForceTerminate();
 

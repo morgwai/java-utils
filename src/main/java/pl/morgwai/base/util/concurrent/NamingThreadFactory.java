@@ -7,8 +7,8 @@ import java.util.function.IntFunction;
 
 
 /**
- * A factory that names new {@link Thread}s based on constructor supplied scheme/name. Each instance
- * has an associated thread group, which newly created threads will belong to.
+ * A factory that names new {@link Thread}s based on constructor supplied generator/name.
+ * Each instance has an associated thread group, which newly created threads will belong to.
  */
 public class NamingThreadFactory implements ThreadFactory {
 
@@ -23,8 +23,8 @@ public class NamingThreadFactory implements ThreadFactory {
 	/**
 	 * Constructs a factory that will create non-daemon threads with {@link Thread#NORM_PRIORITY}
 	 * and names constructed using scheme {@code <name>-thread-<sequenceNumber>}. Created threads
-	 * will belong to a newly created {@link ThreadGroup} associated with this factory named
-	 * {@code name}.
+	 * will belong to a newly created {@link ThreadGroup} named {@code name} associated with this
+	 * factory.
 	 */
 	public NamingThreadFactory(String name) {
 		this(createThreadGroup(name), (i) -> name + "-thread-" + i);
