@@ -18,5 +18,8 @@ Utilities to await for multiple timed blocking operations, such as `Thread.join(
 ### [ConcurrentUtils](src/main/java/pl/morgwai/base/util/concurrent/ConcurrentUtils.java)
 Some helper functions.
 
+### [TaskTrackingExecutor](src/main/java/pl/morgwai/base/util/concurrent/TaskTrackingExecutor.java)
+An `ExecutorService` that allows to obtain a list of tasks that were still running when an attempt to force terminate was made. 2 implementations are provided: [TaskTrackingThreadPoolExecutor](src/main/java/pl/morgwai/base/util/concurrent/TaskTrackingThreadPoolExecutor.java) extending `ThreadPoolExecutor` and [ScheduledTaskTrackingThreadPoolExecutor](src/main/java/pl/morgwai/base/util/concurrent/ScheduledTaskTrackingThreadPoolExecutor.java) extending `ScheduledThreadPoolExecutor`.
+
 ### [NoCopyByteArrayOutputStream](src/main/java/pl/morgwai/base/util/io/NoCopyByteArrayOutputStream.java)
 A `ByteArrayOutputStream` that allows to directly access its underlying buffer after the stream was closed.
