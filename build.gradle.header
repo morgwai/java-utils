@@ -24,6 +24,6 @@ publishing {
 
 test {
 	useJUnit {
-		excludeCategories 'pl.morgwai.base.util.SlowTests'
+		excludeCategories 'pl.morgwai.base.utils.SlowTests'
 	}
 }

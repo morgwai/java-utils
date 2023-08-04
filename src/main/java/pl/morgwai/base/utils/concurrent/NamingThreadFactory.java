@@ -1,4 +1,4 @@
-package pl.morgwai.base.util.concurrent;
+package pl.morgwai.base.utils.concurrent;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;

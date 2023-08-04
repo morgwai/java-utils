@@ -1,3 +1,3 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-/** Multithreading utilities. */
-package pl.morgwai.base.util.concurrent;
+/** Input/Output utilities. */
+package pl.morgwai.base.utils.io;

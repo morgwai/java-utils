@@ -1,5 +1,5 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.util.concurrent;
+package pl.morgwai.base.utils.concurrent;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -9,8 +9,8 @@ import java.util.logging.*;
 import com.google.common.collect.Comparators;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
-import pl.morgwai.base.util.SlowTests;
-import pl.morgwai.base.util.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
+import pl.morgwai.base.utils.SlowTests;
+import pl.morgwai.base.utils.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
 
 import static org.junit.Assert.*;
 

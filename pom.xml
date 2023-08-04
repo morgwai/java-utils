@@ -73,7 +73,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<!-- don't run slow tests during mvn install -->
-					<excludedGroups>pl.morgwai.base.util.SlowTests</excludedGroups>
+					<excludedGroups>pl.morgwai.base.utils.SlowTests</excludedGroups>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -89,7 +89,7 @@
 								<include>**/*Test.java</include>
 								<include>**/*Tests.java</include>
 							</includes>
-							<groups>pl.morgwai.base.util.SlowTests</groups>
+							<groups>pl.morgwai.base.utils.SlowTests</groups>
 						</configuration>
 						<goals>
 							<goal>integration-test</goal>

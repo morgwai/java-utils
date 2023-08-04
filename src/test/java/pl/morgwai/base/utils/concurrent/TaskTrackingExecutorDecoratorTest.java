@@ -1,9 +1,9 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
-package pl.morgwai.base.util.concurrent;
+package pl.morgwai.base.utils.concurrent;
 
 import java.util.concurrent.*;
 
-import pl.morgwai.base.util.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator;
+import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator;
 
 
 
