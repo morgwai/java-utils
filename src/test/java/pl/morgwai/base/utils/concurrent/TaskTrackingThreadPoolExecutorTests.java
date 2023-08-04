@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 
 
-public class TaskTrackingThreadPoolExecutorTest extends TaskTrackingExecutorTest {
+public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingExecutorTests {
 
 
 

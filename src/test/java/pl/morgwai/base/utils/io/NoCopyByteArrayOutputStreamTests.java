@@ -9,7 +9,7 @@ import static org.junit.Assert.*;
 
 
 
-public class NoCopyByteArrayOutputStreamTest {
+public class NoCopyByteArrayOutputStreamTests {
 
 
 

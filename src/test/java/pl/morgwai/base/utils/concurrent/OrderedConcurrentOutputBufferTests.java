@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 
 
 
-public class OrderedConcurrentOutputBufferTest {
+public class OrderedConcurrentOutputBufferTests {
 
 
 
@@ -136,7 +136,7 @@ public class OrderedConcurrentOutputBufferTest {
 		return new Thread(() -> {
 			int bucketNumber;
 			OutputStream<Message> bucket;
-			synchronized (OrderedConcurrentOutputBufferTest.this) {
+			synchronized (OrderedConcurrentOutputBufferTests.this) {
 				bucketNumber = ++bucketCount;
 				if (log.isLoggable(Level.FINER)) log.finer("adding bucket " + bucketNumber);
 				bucket = buffer.addBucket();
@@ -439,7 +439,7 @@ public class OrderedConcurrentOutputBufferTest {
 	// FINEST will additionally log every message written to the output stream
 	static final Level LOG_LEVEL = Level.OFF;
 
-	static final Logger log = Logger.getLogger(OrderedConcurrentOutputBufferTest.class.getName());
+	static final Logger log = Logger.getLogger(OrderedConcurrentOutputBufferTests.class.getName());
 
 	@BeforeClass
 	public static void setupLogging() {

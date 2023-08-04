@@ -15,7 +15,7 @@ import static pl.morgwai.base.utils.concurrent.ConcurrentUtils.completableFuture
 
 
 
-public abstract class TaskTrackingExecutorTest {
+public abstract class TaskTrackingExecutorTests {
 
 
 
@@ -60,7 +60,7 @@ public abstract class TaskTrackingExecutorTest {
 
 
 
-	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTest} */
+	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests} */
 	protected Object unwrapIfScheduled(Runnable task) {
 		return task;
 	}
@@ -376,13 +376,13 @@ public abstract class TaskTrackingExecutorTest {
 	 * {@link #testPerformance(int, long, double)}.
 	 */
 	static Level LOG_LEVEL = Level.WARNING;
-	static final Logger log = Logger.getLogger(TaskTrackingExecutorTest.class.getName());
+	static final Logger log = Logger.getLogger(TaskTrackingExecutorTests.class.getName());
 
 	@BeforeClass
 	public static void setupLogging() {
 		try {
 			LOG_LEVEL = Level.parse(System.getProperty(
-					TaskTrackingExecutorTest.class.getPackageName() + ".level"));
+					TaskTrackingExecutorTests.class.getPackageName() + ".level"));
 		} catch (Exception ignored) {}
 		log.setLevel(LOG_LEVEL);
 		for (final var handler: Logger.getLogger("").getHandlers()) handler.setLevel(LOG_LEVEL);

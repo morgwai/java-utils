@@ -12,7 +12,7 @@ import static pl.morgwai.base.utils.concurrent.ConcurrentUtils.*;
 
 
 
-public class ConcurrentUtilsTest {
+public class ConcurrentUtilsTests {
 
 
 
