@@ -5,9 +5,7 @@ import java.util.concurrent.*;
 
 
 
-/**
- * A {@link TaskTrackingExecutor} based on a {@link ThreadPoolExecutor}.
- */
+/** A {@link TaskTrackingExecutor} based on a {@link ThreadPoolExecutor}. */
 public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 		implements TaskTrackingExecutor {
 
