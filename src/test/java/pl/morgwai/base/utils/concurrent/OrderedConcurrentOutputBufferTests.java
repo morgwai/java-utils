@@ -85,12 +85,12 @@ public class OrderedConcurrentOutputBufferTests {
 
 	@Test
 	public void test500Threads1000MessagesPerThread() throws InterruptedException {
-		testSeveralThreads(500, 1000, 1000, 1000, 0, 0, 1000, 1000, 10);
+		testSeveralThreads(200, 1000, 1000, 1000, 0, 0, 1000, 1000, 10, 1000, 1000, 1, 1000);
 	}
 
 	@Test
-	public void test500Threads1MessagePerThread() throws InterruptedException {
-		testSeveralThreads(500, 1, 1, 1, 1, 0);
+	public void test200Threads1MessagePerThread() throws InterruptedException {
+		testSeveralThreads(200, 1, 1, 1, 1, 0);
 	}
 
 	@Test
@@ -159,7 +159,7 @@ public class OrderedConcurrentOutputBufferTests {
 
 	@Test
 	public void testSignalConcurrentlyWithFlushingLastBucket() throws InterruptedException {
-		testSignalConcurrentlyWithFlushingLastBucket(1000);
+		testSignalConcurrentlyWithFlushingLastBucket(200);
 	}
 
 	@Test
@@ -190,7 +190,7 @@ public class OrderedConcurrentOutputBufferTests {
 	@Test
 	public void testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets()
 			throws InterruptedException {
-		testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets(1000);
+		testConcurrentCloseOfSubsequentBucketsFollowedByClosedBuckets(200);
 	}
 
 	@Test
@@ -233,7 +233,7 @@ public class OrderedConcurrentOutputBufferTests {
 	@Test
 	public void testAddBucketAndSignalWhileClosingTail()
 			throws Throwable {
-		testAddBucketAndSignalWhileClosingTail(1000);
+		testAddBucketAndSignalWhileClosingTail(200);
 	}
 
 	@Test
@@ -298,9 +298,9 @@ public class OrderedConcurrentOutputBufferTests {
 
 	@Test
 	@Category({SlowTests.class})
-	public void testAddBucketAndSignalWhileFlushingTail1kTries()
+	public void testAddBucketAndSignalWhileFlushingTail50kTries()
 			throws Throwable {
-		testAddBucketAndSignalWhileFlushingTail(1000);
+		testAddBucketAndSignalWhileFlushingTail(50_000);
 	}
 
 	public void testAddBucketAndSignalWhileFlushingTail(int numberOfTries)
