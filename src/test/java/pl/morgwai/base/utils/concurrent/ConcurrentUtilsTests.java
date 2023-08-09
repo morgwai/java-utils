@@ -107,6 +107,34 @@ public class ConcurrentUtilsTests {
 
 
 	@Test
+	public void testCompletableFutureSupplyAsyncPropagatesExecutorException()
+			throws InterruptedException {
+		final var executor = new ThreadPoolExecutor(
+				1, 1, 0L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1));
+		final var blockingTaskStarted = new CountDownLatch(1);
+		final var taskBlockingLatch = new CountDownLatch(1);
+		executor.execute(() -> {  // make executor's thread busy
+			blockingTaskStarted.countDown();
+			try {
+				taskBlockingLatch.await();
+			} catch (InterruptedException ignored) {}
+		});
+		executor.execute(() -> {});  // fill the queue
+		assertTrue("blocking task should start",
+				blockingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
+
+		try {
+			completableFutureSupplyAsync(() -> "", executor);
+			fail("supplyAsync(...) should propagate an Exception thrown by the executor");
+		} catch (RejectedExecutionException expected) {
+		} finally {
+			taskBlockingLatch.countDown();
+		}
+	}
+
+
+
+	@Test
 	public void testAwaitableOfMonitorConditionWithInterrupt() throws Throwable {
 		final var monitor = new Object();
 		final var threadStarted = new CountDownLatch(1);
