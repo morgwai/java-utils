@@ -1,3 +1,4 @@
+// Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.utils.concurrent;
 
 import java.util.concurrent.ThreadFactory;
