@@ -14,7 +14,7 @@ import java.util.concurrent.*;
  * decorating in ScheduledThreadPoolExecutor} this class is <i>extremely</i> slow in case of
  * a large number of very tiny tasks. See
  * <a href="https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/share/classes/
- *java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">
+java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">
  * the comment with an explanation in the source</a>.</p>
  */
 public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPoolExecutor
