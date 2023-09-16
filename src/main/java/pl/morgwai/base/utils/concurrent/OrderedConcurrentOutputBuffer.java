@@ -11,7 +11,7 @@ import java.util.List;
  * {@link OutputStream the underlying output stream} are available, so that they all can be
  * {@link OutputStream#write(Object) written} in the desired order. Useful for processing input
  * streams in several concurrent threads when the order of the resulting outbound messages must
- * reflect the order of inbound messages.
+ * reflect the order of the inbound messages.
  * <p>
  * A buffer consists of ordered buckets that implement {@link OutputStream} just as the underlying
  * output stream passed to {@link #OrderedConcurrentOutputBuffer(OutputStream) the constructor}.
