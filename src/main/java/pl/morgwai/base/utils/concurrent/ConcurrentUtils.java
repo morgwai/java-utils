@@ -43,6 +43,8 @@ public interface ConcurrentUtils {
 		return execution;
 	}
 
+
+
 	/**
 	 * Wrapper for {@link Callable} tasks passed to
 	 * {@link #completableFutureSupplyAsync(Callable, Executor)}.
@@ -101,6 +103,8 @@ public interface ConcurrentUtils {
 			}		}
 		return true;
 	}
+
+
 
 	/**
 	 * Calls {@link #waitForMonitorCondition(Object, BooleanSupplier, long, TimeUnit)

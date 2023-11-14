@@ -25,6 +25,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 	 */
 	ForcedTerminationAftermath tryForceTerminate();
 
+
+
 	/** Returned by {@link #tryForceTerminate()}. */
 	class ForcedTerminationAftermath {
 
@@ -49,9 +51,13 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		return Awaitable.ofTermination(this);
 	}
 
+
+
 	default Awaitable.WithUnit toAwaitableOfEnforcedTermination() {
 		return Awaitable.ofEnforcedTermination(this);
 	}
+
+
 
 	default void awaitTermination() throws InterruptedException {
 		while ( !awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS));
@@ -88,6 +94,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			this(executorToDecorate, true, 1);
 		}
 
+
+
 		/**
 		 * Decorates {@code executorToDecorate} and calls
 		 * {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)
@@ -97,6 +105,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			this(executorToDecorate, true, executorToDecorate.getCorePoolSize());
 			decorateRejectedExecutionHandler(executorToDecorate);
 		}
+
+
 
 		/**
 		 * Decorates {@code executorToDecorate}. This is a low-level constructor for subclasses of
@@ -119,6 +129,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			unwrapTasks = delegatingExecute ? UNWRAP_TASKS : Function.identity();
 			this.backingExecutor = executorToDecorate;
 		}
+
+
 
 		/**
 		 * Decorates {@code executor}'s {@link RejectedExecutionHandler} to unwrap tasks from
@@ -147,6 +159,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			);
 		}
 
+
+
 		@Override
 		public List<Runnable> shutdownNow() {
 			return unwrapTasks.apply(backingExecutor.shutdownNow());
@@ -155,6 +169,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		ThreadLocal<TaskHolder> taskHolder = new ThreadLocal<>();
+
+
 
 		/**
 		 * Hook to be called by a worker thread right before running {@code task}. This method is
@@ -176,6 +192,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			localHolder.task = task;
 		}
 
+
+
 		/**
 		 * Hook to be called by a worker thread right after running a task. This method is
 		 * called automatically by this decorator's {@link #execute(Runnable)} method: it is
@@ -193,6 +211,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		public void execute(Runnable task) {
 			backingExecutor.execute(new TrackableTask(task));
 		}
+
+
 
 		/**
 		 * A decorator that automatically calls {@link #storeTaskIntoHolderBeforeExecute(Runnable)}
@@ -220,6 +240,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 				return  wrappedTask.toString();
 			}
 		}
+
+
 
 		/**
 		 * If {@code task} is an instance of {@link TrackableTask} returns

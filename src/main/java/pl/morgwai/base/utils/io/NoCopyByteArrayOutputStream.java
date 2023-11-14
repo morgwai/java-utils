@@ -70,6 +70,8 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 		}
 	}
 
+
+
 	/**
 	 * Ensures {@link #close()} hasn't been called yet and calls {@code super}.
 	 * @throws IllegalStateException if this stream has already been closed.
@@ -83,6 +85,8 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 		}
 	}
 
+
+
 	/**
 	 * Ensures {@link #close()} hasn't been called yet and calls {@code super}.
 	 * @throws IllegalStateException if this stream has already been closed.
@@ -91,6 +95,8 @@ public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 		if (buf == null) throw new IllegalStateException(STREAM_CLOSED_MESSAGE);
 		super.reset();
 	}
+
+
 
 	static final String STREAM_CLOSED_MESSAGE = "stream already closed";
 }

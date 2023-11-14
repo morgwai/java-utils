@@ -50,15 +50,11 @@ public interface Awaitable {
 		/** A version of {@link #await(long)} method with additional {@link TimeUnit} param. */
 		boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
-
-
 		/** Calls {@link #await(long, TimeUnit) await(timeoutMillis, TimeUnit.MILLISECONDS)}. */
 		@Override
 		default boolean await(long timeoutMillis) throws InterruptedException {
 			return await(timeoutMillis, TimeUnit.MILLISECONDS);
 		}
-
-
 
 		/** Returns this. */
 		@Override
