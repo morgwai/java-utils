@@ -11,7 +11,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 
 
 
-	final TaskTrackingExecutorDecorator taskTracingDecorator;
+	final TaskTrackingExecutorDecorator taskTrackingDecorator;
 
 
 
@@ -29,7 +29,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 			unit,
 			workQueue
 		);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -37,7 +37,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
-		taskTracingDecorator.storeTaskIntoHolderBeforeExecute(task);
+		taskTrackingDecorator.storeTaskIntoHolderBeforeExecute(task);
 	}
 
 
@@ -45,14 +45,14 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		taskTracingDecorator.clearTaskHolderAfterExecute();
+		taskTrackingDecorator.clearTaskHolderAfterExecute();
 	}
 
 
 
 	@Override
 	public ForcedTerminationAftermath tryForceTerminate() {
-		return taskTracingDecorator.tryForceTerminate();
+		return taskTrackingDecorator.tryForceTerminate();
 	}
 
 
@@ -73,7 +73,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 			workQueue,
 			threadFactory
 		);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -94,7 +94,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 			workQueue,
 			handler
 		);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -117,6 +117,6 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 			threadFactory,
 			handler
 		);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 }

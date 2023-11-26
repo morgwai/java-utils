@@ -22,13 +22,13 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 
 
-	final TaskTrackingExecutorDecorator taskTracingDecorator;
+	final TaskTrackingExecutorDecorator taskTrackingDecorator;
 
 
 
 	public ScheduledTaskTrackingThreadPoolExecutor(int corePoolSize) {
 		super(corePoolSize);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -36,7 +36,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void beforeExecute(Thread worker, Runnable task) {
-		taskTracingDecorator.storeTaskIntoHolderBeforeExecute(task);
+		taskTrackingDecorator.storeTaskIntoHolderBeforeExecute(task);
 	}
 
 
@@ -44,14 +44,14 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	/** Subclasses must call {@code super}. */
 	@Override
 	protected void afterExecute(Runnable task, Throwable error) {
-		taskTracingDecorator.clearTaskHolderAfterExecute();
+		taskTrackingDecorator.clearTaskHolderAfterExecute();
 	}
 
 
 
 	@Override
 	public ForcedTerminationAftermath tryForceTerminate() {
-		return taskTracingDecorator.tryForceTerminate();
+		return taskTrackingDecorator.tryForceTerminate();
 	}
 
 
@@ -134,7 +134,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 	public ScheduledTaskTrackingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
 		super(corePoolSize, threadFactory);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -142,7 +142,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	public ScheduledTaskTrackingThreadPoolExecutor(
 			int corePoolSize, RejectedExecutionHandler handler) {
 		super(corePoolSize, handler);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 
 
@@ -150,6 +150,6 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	public ScheduledTaskTrackingThreadPoolExecutor(
 			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
 		super(corePoolSize, threadFactory, handler);
-		taskTracingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
 	}
 }
