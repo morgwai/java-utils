@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 
 
@@ -148,6 +149,10 @@ public interface Awaitable {
 	 * <ul>
 	 *   <li>a family that accepts varargs of {@link Entry operationEntries} that map objects to
 	 *     {@link Awaitable Awaitable operations} to be performed. This family returns a
+	 *     {@link List} of objects for which their respective {@link Awaitable operations} failed
+	 *     (returned {@code false}).</li>
+	 *   <li>a family that accepts {@link Stream} of {@link Entry operationEntries} that map objects
+	 *     to {@link Awaitable Awaitable operations} to be performed. This family returns a
 	 *     {@link List} of objects for which their respective {@link Awaitable operations} failed
 	 *     (returned {@code false}).</li>
 	 *   <li>a family that accepts a {@link List} of objects and an {@link Function adapter
@@ -301,6 +306,49 @@ public interface Awaitable {
 				TimeUnit.MILLISECONDS,
 				true,
 				Arrays.asList(operationEntries).iterator());
+	}
+
+
+
+	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Stream<Entry<T>> operationEntries
+	) throws AwaitInterruptedException {
+		return awaitMultiple(timeout, unit, continueOnInterrupt, operationEntries.iterator());
+	}
+
+	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitMultiple(
+		long timeoutMillis,
+		boolean continueOnInterrupt,
+		Stream<Entry<T>> operationEntries
+	) throws AwaitInterruptedException {
+		return awaitMultiple(
+			timeoutMillis,
+			TimeUnit.MILLISECONDS,
+			continueOnInterrupt,
+			operationEntries.iterator()
+		);
+	}
+
+	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Stream<Entry<T>> operationEntries)
+			throws AwaitInterruptedException {
+		return awaitMultiple(timeout, unit, true, operationEntries.iterator());
+	}
+
+	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitMultiple(long timeoutMillis, Stream<Entry<T>> operationEntries)
+			throws AwaitInterruptedException {
+		return awaitMultiple(
+			timeoutMillis,
+			TimeUnit.MILLISECONDS,
+			true,
+			operationEntries.iterator()
+		);
 	}
 
 
