@@ -351,12 +351,18 @@ public abstract class TaskTrackingExecutorTests {
 		int numberOfTasks,
 		long taskDurationMillis
 	) throws InterruptedException {
-		final var startMillis = System.currentTimeMillis();
-		for (int i = 0; i < numberOfTasks; i++) executor.execute(() -> {
+		final var warmupCount = 5;
+		final var warmupDone = new CountDownLatch(warmupCount);
+		for (int i = 0; i < warmupCount; i++) executor.execute(warmupDone::countDown);
+		assertTrue("warmup should be fast", warmupDone.await(100L, TimeUnit.MILLISECONDS));
+		final Runnable testTask = () -> {
 			try {
 				Thread.sleep(taskDurationMillis);
 			} catch (InterruptedException ignored) {}
-		});
+		};
+		testTask.run();  // warmup
+		final var startMillis = System.currentTimeMillis();
+		for (int i = 0; i < numberOfTasks; i++) executor.execute(testTask);
 		executor.shutdown();
 		assertTrue("executor should terminate in a reasonable time",
 				executor.awaitTermination(100L, TimeUnit.SECONDS));
