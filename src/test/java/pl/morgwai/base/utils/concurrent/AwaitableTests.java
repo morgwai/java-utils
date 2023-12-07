@@ -3,7 +3,6 @@ package pl.morgwai.base.utils.concurrent;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.google.common.collect.Comparators;
@@ -41,11 +40,12 @@ public class AwaitableTests {
 		assertTrue("test data integrity check", tasksToFail.last() < NUMBER_OF_TASKS);
 
 		final List<Integer> failed = Awaitable.awaitMultiple(
-				5L,
-				TimeUnit.DAYS,
-				(taskNumber) -> (Awaitable.WithUnit)
-						(timeout, unit) -> !tasksToFail.contains(taskNumber),
-				IntStream.range(0, 20).boxed().collect(Collectors.toList()));
+			5L,
+			TimeUnit.DAYS,
+			IntStream.range(0, 20)
+				.boxed()
+				.map((i) -> Awaitable.newEntry(i, (timeout) -> !tasksToFail.contains(i)))
+		);
 		assertEquals("number of failed tasks should equal to the size of tasksToFail",
 				tasksToFail.size(), failed.size());
 		for (var task: failed) {
@@ -251,8 +251,9 @@ public class AwaitableTests {
 					Awaitable.awaitMultiple(
 						TOTAL_TIMEOUT_MILLIS,
 						false,
-						(i) -> tasks[i],
-						IntStream.range(0, tasks.length).boxed().collect(Collectors.toList())
+						IntStream.range(0, tasks.length)
+							.boxed()
+							.map(Awaitable.entryMapper(i -> tasks[i]))
 					);
 					fail("InterruptedException should be thrown");
 				} catch (AwaitInterruptedException e) {
@@ -414,8 +415,7 @@ public class AwaitableTests {
 				allThreadsStarted.await(100L, TimeUnit.MILLISECONDS));
 		final var failed = Awaitable.awaitMultiple(
 			EXECUTION_DELAY_MILLIS + 20L,
-			Awaitable::ofJoin,
-			Arrays.asList(threads)
+			Arrays.stream(threads).map(Awaitable.entryMapper(Awaitable::ofJoin))
 		);
 		assertTrue("all threads should be marked as completed", failed.isEmpty());
 		if (asyncError != null)  throw asyncError;

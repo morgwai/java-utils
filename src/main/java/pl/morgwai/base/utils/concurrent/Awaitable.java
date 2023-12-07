@@ -124,7 +124,7 @@ public interface Awaitable {
 
 	/**
 	 * Awaits for multiple {@link Awaitable timed blocking operations} specified by
-	 * {@code operationEntries}. Each {@link Entry Entry} maps an {@link Entry#getObject() object}
+	 * {@code awaitableEntries}. Each {@link Entry Entry} maps an {@link Entry#getObject() object}
 	 * on which an operation should be performed (for example a {@link Thread}
 	 * to be {@link Thread#join(long) joined} or an {@link ExecutorService executor} to be
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) terminated})
@@ -147,18 +147,14 @@ public interface Awaitable {
 	 * Note: this is a "low-level" core version: there are several "frontend" functions defined in
 	 * this class with more convenient API divided into 3 families:</p>
 	 * <ul>
-	 *   <li>a family that accepts varargs of {@link Entry operationEntries} that map objects to
+	 *   <li>a family that accepts varargs of {@link Entry awaitableEntries} that map objects to
 	 *     {@link Awaitable Awaitable operations} to be performed. This family returns a
 	 *     {@link List} of objects for which their respective {@link Awaitable operations} failed
 	 *     (returned {@code false}).</li>
-	 *   <li>a family that accepts {@link Stream} of {@link Entry operationEntries} that map objects
+	 *   <li>a family that accepts {@link Stream} of {@link Entry awaitableEntries} that map objects
 	 *     to {@link Awaitable Awaitable operations} to be performed. This family returns a
 	 *     {@link List} of objects for which their respective {@link Awaitable operations} failed
 	 *     (returned {@code false}).</li>
-	 *   <li>a family that accepts a {@link List} of objects and an {@link Function adapter
-	 *     Function} that returns {@link Awaitable Awaitable operations} for supplied objects.
-	 *     Similarly to the previous family, this one returns a {@link List} of objects for which
-	 *     their respective {@link Awaitable operations} failed.</li>
 	 *   <li>a family that accepts varargs of {@link Awaitable Awaitable operations}. This family
 	 *     returns {@code true} if all {@code operations} succeeded, {@code false} otherwise.</li>
 	 * </ul>
@@ -175,15 +171,15 @@ public interface Awaitable {
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
-		Iterator<Entry<T>> operationEntries
+		Iterator<Entry<T>> awaitableEntries
 	) throws AwaitInterruptedException {
 		var remainingNanos =  unit.toNanos(timeout);
 		final var deadlineNanos = System.nanoTime() + remainingNanos;
 		final var failedTasks = new LinkedList<T>();
 		final var interruptedTasks = new LinkedList<T>();
 		boolean interrupted = false;
-		while (operationEntries.hasNext()) {
-			final var operationEntry = operationEntries.next();
+		while (awaitableEntries.hasNext()) {
+			final var operationEntry = awaitableEntries.next();
 			try {
 				if (
 					!operationEntry.operation.toAwaitableWithUnit()
@@ -199,14 +195,14 @@ public interface Awaitable {
 				interruptedTasks.add(operationEntry.object);
 				if ( !continueOnInterrupt) {
 					throw new AwaitInterruptedException(
-							failedTasks, interruptedTasks, operationEntries);
+							failedTasks, interruptedTasks, awaitableEntries);
 				}
 				remainingNanos = 1L;
 				interrupted = true;
 			}
 		}
 		if (interrupted) {
-			throw new AwaitInterruptedException(failedTasks, interruptedTasks, operationEntries);
+			throw new AwaitInterruptedException(failedTasks, interruptedTasks, awaitableEntries);
 		}
 		return failedTasks;
 	}
@@ -234,6 +230,12 @@ public interface Awaitable {
 
 	static <T> Entry<T> newEntry(T object, Awaitable operation) {
 		return new Entry<>(object, operation);
+	}
+
+
+
+	static <T> Function<T, Entry<T>> entryMapper(Function<? super T, ? extends Awaitable> adapter) {
+		return (t) -> newEntry(t, adapter.apply(t));
 	}
 
 
@@ -278,13 +280,13 @@ public interface Awaitable {
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
-		Entry<T>... operationEntries
+		Entry<T>... awaitableEntries
 	) throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeout,
 			unit,
 			continueOnInterrupt,
-			Arrays.asList(operationEntries).iterator()
+			Arrays.asList(awaitableEntries).iterator()
 		);
 	}
 
@@ -293,32 +295,32 @@ public interface Awaitable {
 	static <T> List<T> awaitMultiple(
 		long timeoutMillis,
 		boolean continueOnInterrupt,
-		Entry<T>... operationEntries
+		Entry<T>... awaitableEntries
 	) throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
 			TimeUnit.MILLISECONDS,
 			continueOnInterrupt,
-			Arrays.asList(operationEntries).iterator()
+			Arrays.asList(awaitableEntries).iterator()
 		);
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
 	@SafeVarargs
-	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Entry<T>... operationEntries)
+	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Entry<T>... awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, true, Arrays.asList(operationEntries).iterator());
+		return awaitMultiple(timeout, unit, true, Arrays.asList(awaitableEntries).iterator());
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
 	@SafeVarargs
-	static <T> List<T> awaitMultiple(long timeoutMillis, Entry<T>... operationEntries)
+	static <T> List<T> awaitMultiple(long timeoutMillis, Entry<T>... awaitableEntries)
 			throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
 			TimeUnit.MILLISECONDS,
 			true,
-			Arrays.asList(operationEntries).iterator()
+			Arrays.asList(awaitableEntries).iterator()
 		);
 	}
 
@@ -329,100 +331,39 @@ public interface Awaitable {
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
-		Stream<Entry<T>> operationEntries
+		Stream<Entry<T>> awaitableEntries
 	) throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, continueOnInterrupt, operationEntries.iterator());
+		return awaitMultiple(timeout, unit, continueOnInterrupt, awaitableEntries.iterator());
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
 	static <T> List<T> awaitMultiple(
 		long timeoutMillis,
 		boolean continueOnInterrupt,
-		Stream<Entry<T>> operationEntries
+		Stream<Entry<T>> awaitableEntries
 	) throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
 			TimeUnit.MILLISECONDS,
 			continueOnInterrupt,
-			operationEntries.iterator()
+			awaitableEntries.iterator()
 		);
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Stream<Entry<T>> operationEntries)
+	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Stream<Entry<T>> awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, true, operationEntries.iterator());
+		return awaitMultiple(timeout, unit, true, awaitableEntries.iterator());
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(long timeoutMillis, Stream<Entry<T>> operationEntries)
+	static <T> List<T> awaitMultiple(long timeoutMillis, Stream<Entry<T>> awaitableEntries)
 			throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
 			TimeUnit.MILLISECONDS,
 			true,
-			operationEntries.iterator()
-		);
-	}
-
-
-
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(
-		long timeout,
-		TimeUnit unit,
-		boolean continueOnInterrupt,
-		Function<? super T, Awaitable> adapter,
-		List<T> objects
-	) throws AwaitInterruptedException {
-		return awaitMultiple(
-			timeout,
-			unit,
-			continueOnInterrupt,
-			objects.stream()
-				.map((object) -> newEntry(object, adapter.apply(object)))
-				.iterator()
-		);
-	}
-
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(
-		long timeoutMillis,
-		boolean continueOnInterrupt,
-		Function<? super T, Awaitable> adapter,
-		List<T> objects
-	) throws AwaitInterruptedException {
-		return Awaitable.awaitMultiple(
-			timeoutMillis,
-			TimeUnit.MILLISECONDS,
-			continueOnInterrupt,
-			adapter,
-			objects
-		);
-	}
-
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(
-		long timeout,
-		TimeUnit unit,
-		Function<? super T, Awaitable> adapter,
-		List<T> objects
-	) throws AwaitInterruptedException {
-		return Awaitable.awaitMultiple(timeout, unit, true, adapter, objects);
-	}
-
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(
-		long timeoutMillis,
-		Function<? super T, Awaitable> adapter,
-		List<T> objects
-	) throws AwaitInterruptedException {
-		return Awaitable.awaitMultiple(
-			timeoutMillis,
-			TimeUnit.MILLISECONDS,
-			true,
-			adapter,
-			objects
+			awaitableEntries.iterator()
 		);
 	}
 
@@ -502,5 +443,70 @@ public interface Awaitable {
 	static boolean awaitMultiple(long timeoutMillis, Awaitable.WithUnit... operations)
 			throws AwaitInterruptedException {
 		return awaitMultiple(timeoutMillis, TimeUnit.MILLISECONDS, true, (Awaitable[]) operations);
+	}
+
+
+
+	/** @deprecated use {@link #awaitMultiple(long, TimeUnit, boolean, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Function<? super T, Awaitable> adapter,
+		List<T> objects
+	) throws AwaitInterruptedException {
+		return awaitMultiple(
+			timeout,
+			unit,
+			continueOnInterrupt,
+			objects.stream()
+				.map((object) -> newEntry(object, adapter.apply(object)))
+				.iterator()
+		);
+	}
+
+	/** @deprecated use {@link #awaitMultiple(long, boolean, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeoutMillis,
+		boolean continueOnInterrupt,
+		Function<? super T, Awaitable> adapter,
+		List<T> objects
+	) throws AwaitInterruptedException {
+		return Awaitable.awaitMultiple(
+			timeoutMillis,
+			TimeUnit.MILLISECONDS,
+			continueOnInterrupt,
+			adapter,
+			objects
+		);
+	}
+
+	/** @deprecated use {@link #awaitMultiple(long, TimeUnit, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		Function<? super T, Awaitable> adapter,
+		List<T> objects
+	) throws AwaitInterruptedException {
+		return Awaitable.awaitMultiple(timeout, unit, true, adapter, objects);
+	}
+
+	/** @deprecated use {@link #awaitMultiple(long, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeoutMillis,
+		Function<? super T, Awaitable> adapter,
+		List<T> objects
+	) throws AwaitInterruptedException {
+		return Awaitable.awaitMultiple(
+			timeoutMillis,
+			TimeUnit.MILLISECONDS,
+			true,
+			adapter,
+			objects
+		);
 	}
 }
