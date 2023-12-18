@@ -2,8 +2,8 @@
 
 Some utility classes.<br/>
 <br/>
-**latest release: [3.1](https://search.maven.org/artifact/pl.morgwai.base/java-utils/3.1/jar)**
-([javadoc](https://javadoc.io/doc/pl.morgwai.base/java-utils/3.1))
+**latest release: [3.2](https://search.maven.org/artifact/pl.morgwai.base/java-utils/3.2/jar)**
+([javadoc](https://javadoc.io/doc/pl.morgwai.base/java-utils/3.2))
 
 **Note:** from version 2.0, `java.util.logging` utilities have been moved to a separate [repo](https://github.com/morgwai/jul-utils).
 
