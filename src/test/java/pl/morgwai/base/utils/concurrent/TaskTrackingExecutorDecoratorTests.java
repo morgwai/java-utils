@@ -13,7 +13,9 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 
 	@Override
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
-			int threadPoolSize, int queueSize) {
+		int threadPoolSize,
+		int queueSize
+	) {
 		final var backingExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
 				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = backingExecutor;

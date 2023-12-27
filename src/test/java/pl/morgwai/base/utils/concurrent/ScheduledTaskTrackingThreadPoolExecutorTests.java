@@ -21,7 +21,9 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 
 	@Override
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
-			int threadPoolSize, int queueSize) {
+		int threadPoolSize,
+		int queueSize
+	) {
 		scheduler = new ScheduledTaskTrackingThreadPoolExecutor(threadPoolSize);
 		expectedNoopTaskPerformanceFactor = 10.0d;
 		expected1msTaskPerformanceFactor = 1.03d;
@@ -81,9 +83,11 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 				scheduledExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
-		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
+		assertEquals("1 task should be running in the aftermath",
+				1, aftermath.runningTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
-		assertSame("runningTask should be wrapping scheduledTask", scheduledTask, runningTask);
+		assertSame("runningTask should be wrapping scheduledTask",
+				scheduledTask, runningTask);
 		try {
 			scheduledExecution.get(20L, TimeUnit.MILLISECONDS);
 			fail("CancellationException expected");
@@ -129,9 +133,11 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 				scheduledExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
-		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
+		assertEquals("1 task should be running in the aftermath",
+				1, aftermath.runningTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
-		assertSame("runningTask should be wrapping scheduledTask", scheduledTask, runningTask);
+		assertSame("runningTask should be wrapping scheduledTask",
+				scheduledTask, runningTask);
 		assertSame("scheduledExecution should return the same result as scheduledTask",
 				result, scheduledExecution.get(20L, TimeUnit.MILLISECONDS));
 		assertTrue("executor should terminate after the forced shutdown",

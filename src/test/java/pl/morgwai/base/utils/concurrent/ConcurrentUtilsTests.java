@@ -151,11 +151,13 @@ public class ConcurrentUtilsTests {
 			}
 		});
 		awaitingThread.start();
-		assertTrue("awaitingThread should start", threadStarted.await(100L, TimeUnit.MILLISECONDS));
+		assertTrue("awaitingThread should start",
+				threadStarted.await(100L, TimeUnit.MILLISECONDS));
 
 		awaitingThread.interrupt();
 		awaitingThread.join(20L);
-		assertFalse("awaitingThread should exit after an interrupt", awaitingThread.isAlive());
+		assertFalse("awaitingThread should exit after an interrupt",
+				awaitingThread.isAlive());
 
 		if (asyncError != null) throw asyncError;
 	}
@@ -178,7 +180,8 @@ public class ConcurrentUtilsTests {
 
 		awaitingThread.start();
 		awaitingThread.join(100L);
-		assertFalse("awaitingThread should exit after the timeout", awaitingThread.isAlive());
+		assertFalse("awaitingThread should exit after the timeout",
+				awaitingThread.isAlive());
 
 		if (asyncError != null) throw asyncError;
 	}
@@ -202,7 +205,8 @@ public class ConcurrentUtilsTests {
 			}
 		});
 		awaitingThread.start();
-		assertTrue("awaitingThread should start", threadStarted.await(100L, TimeUnit.MILLISECONDS));
+		assertTrue("awaitingThread should start",
+				threadStarted.await(100L, TimeUnit.MILLISECONDS));
 
 		synchronized (monitor) {
 			monitor.notify();

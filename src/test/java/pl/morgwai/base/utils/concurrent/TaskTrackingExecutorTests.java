@@ -46,6 +46,8 @@ public abstract class TaskTrackingExecutorTests {
 	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
 			int threadPoolSize, int queueSize);
 
+
+
 	@After
 	public void tryTerminate() {
 		testSubject.shutdown();
@@ -68,10 +70,8 @@ public abstract class TaskTrackingExecutorTests {
 
 
 	@Test
-	public void testExecuteCallable()
-			throws InterruptedException, TimeoutException, ExecutionException {
+	public void testExecuteCallable() throws Exception {
 		final var result = "result";
-
 		final var execution = completableFutureSupplyAsync(() -> result, testSubject);
 		assertSame("obtained result should be the same as returned",
 				result, execution.get(50L, TimeUnit.MILLISECONDS));
@@ -101,8 +101,7 @@ public abstract class TaskTrackingExecutorTests {
 			}
 		};
 
-		final var blockingTaskExecution =
-				completableFutureSupplyAsync(blockingTask, testSubject);
+		final var blockingTaskExecution = completableFutureSupplyAsync(blockingTask, testSubject);
 		final var instantTaskExecution = completableFutureSupplyAsync(instantTask, testSubject);
 		assertTrue("blockingTask should start",
 				blockingTaskStarted.await(20L, TimeUnit.MILLISECONDS));
@@ -112,10 +111,12 @@ public abstract class TaskTrackingExecutorTests {
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
 		assertFalse("blockingTaskExecution should not complete",
 				blockingTaskExecution.isDone());
-		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
+		assertFalse("instantTask should not be executed",
+				instantTaskExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
-		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
+		assertEquals("1 task should be running in the aftermath",
+				1, aftermath.runningTasks.size());
 		assertEquals("1 task should be unexecuted in the aftermath",
 				1, aftermath.unexecutedTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
@@ -134,10 +135,8 @@ public abstract class TaskTrackingExecutorTests {
 		} catch (TimeoutException e) {
 			fail("blockingTaskExecution should complete after the forced shutdown");
 		} catch (ExecutionException e) {
-			assertTrue(
-				"blockingTask should throw an InterruptedException after forced shutdown",
-				e.getCause() instanceof InterruptedException
-			);
+			assertTrue("blockingTask should throw an InterruptedException after forced shutdown",
+					e.getCause() instanceof InterruptedException);
 		}
 		assertTrue("executor should terminate after the forced shutdown",
 				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
@@ -189,7 +188,8 @@ public abstract class TaskTrackingExecutorTests {
 		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
-		assertEquals("1 task should be running in the aftermath", 1, aftermath.runningTasks.size());
+		assertEquals("1 task should be running in the aftermath",
+				1, aftermath.runningTasks.size());
 		assertEquals("1 task should be unexecuted in the aftermath",
 				1, aftermath.unexecutedTasks.size());
 		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
@@ -252,7 +252,8 @@ public abstract class TaskTrackingExecutorTests {
 		taskBlockingLatch.countDown();
 		assertSame("rejectingExecutor should be expectedRejectingExecutor",
 				expectedRejectingExecutor, rejectingExecutor);
-		assertSame("rejectedTask should be overloadingTask", overloadingTask, rejectedTask);
+		assertSame("rejectedTask should be overloadingTask",
+				overloadingTask, rejectedTask);
 	}
 
 
@@ -290,7 +291,8 @@ public abstract class TaskTrackingExecutorTests {
 				testSubject.awaitTermination(50L, TimeUnit.MILLISECONDS));
 
 		final var aftermath = testSubject.tryForceTerminate();
-		assertTrue("there should be no running tasks", aftermath.getRunningTasks().isEmpty());
+		assertTrue("there should be no running tasks",
+				aftermath.getRunningTasks().isEmpty());
 	}
 
 
@@ -354,7 +356,8 @@ public abstract class TaskTrackingExecutorTests {
 		final var warmupCount = 5;
 		final var warmupDone = new CountDownLatch(warmupCount);
 		for (int i = 0; i < warmupCount; i++) executor.execute(warmupDone::countDown);
-		assertTrue("warmup should be fast", warmupDone.await(100L, TimeUnit.MILLISECONDS));
+		assertTrue("warmup should be fast",
+				warmupDone.await(100L, TimeUnit.MILLISECONDS));
 		final Runnable testTask = () -> {
 			try {
 				Thread.sleep(taskDurationMillis);

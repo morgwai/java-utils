@@ -2,7 +2,8 @@
 package pl.morgwai.base.utils.concurrent;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
 
@@ -20,27 +21,48 @@ public class OrderedConcurrentOutputBufferTests {
 
 
 
-	OrderedConcurrentOutputBuffer<Message> buffer;
+	static final Comparator<Message> messageComparator =
+			Comparator.comparingInt((Message msg) -> msg.bucket)
+				.thenComparingInt((msg) -> msg.number);
 
+
+
+	OrderedConcurrentOutputBuffer<Message> buffer;
 	OutputStream<Message> outputStream;
 	List<Message> outputData;  // outputStream.write(message) will add message to this list
 	AtomicInteger closeCount;  // outputStream.close() will increase this counter
+	int[] bucketMessageNumbers;  // number of messages created by the bucket Thread at a given index
+	Throwable asyncError;
 
 
 
-	int[] bucketMessageNumbers;
+	@Before
+	public void setup() {
+		outputData = new LinkedList<>();
+		closeCount = new AtomicInteger(0);
+		outputStream = new OutputStream<>() {
 
+			@Override public void write(Message message) {
+				if (closeCount.get() > 0) throw new IllegalStateException("output already closed");
+				outputData.add(message);
+				if (log.isLoggable(Level.FINEST)) log.finest(message.toString());
+			}
+
+			@Override public void close() {
+				closeCount.incrementAndGet();
+				if (log.isLoggable(Level.FINER)) log.finer("closing output stream");
+			}
+		};
+		buffer = new OrderedConcurrentOutputBuffer<>(outputStream);
+	}
+
+
+
+	/** Create a new message for the bucket thread number {@code bucketNumber}. */
 	Message nextMessage(int bucketNumber) {
 		return new Message(bucketNumber, ++bucketMessageNumbers[bucketNumber - 1]);
 	}
 
-	int sumUpMessageCount() {
-		int messageCount = 0;
-		for (int bucketMessageCount: bucketMessageNumbers) messageCount += bucketMessageCount;
-		return messageCount;
-	}
-
-	Throwable asyncError;
 
 
 	@Test
@@ -75,10 +97,12 @@ public class OrderedConcurrentOutputBufferTests {
 		buffer.signalNoMoreBuckets();
 		bucket4.close();
 
-		assertEquals("all messages should be written", sumUpMessageCount(), outputData.size());
+		assertEquals("all messages should be written",
+				Arrays.stream(bucketMessageNumbers).reduce(0, Integer::sum), outputData.size());
 		assertTrue("messages should be written in order",
 				Comparators.isInStrictOrder(outputData, messageComparator));
-		assertEquals("stream should be closed 1 time", 1, closeCount.get());
+		assertEquals("stream should be closed 1 time",
+				1, closeCount.get());
 	}
 
 
@@ -111,33 +135,33 @@ public class OrderedConcurrentOutputBufferTests {
 	 */
 	void testSeveralThreads(int numberOfBucketThreads, int... messagesPerThread)
 			throws InterruptedException {
-		bucketCount = 0;
+		final int[]  bucketCountHolder = {0};
 		int expectedMessageCount = 0;
 		bucketMessageNumbers = new int[numberOfBucketThreads];
 		Thread[] bucketThreads = new Thread[numberOfBucketThreads];
 		for (int i = 0; i < bucketThreads.length; i++) {
 			int numberOfMessages = messagesPerThread[i % messagesPerThread.length];
-			bucketThreads[i] = newBucketThread(numberOfMessages);
+			bucketThreads[i] = newBucketThread(bucketCountHolder, numberOfMessages);
 			expectedMessageCount += numberOfMessages;
 		}
 		for (var bucketThread: bucketThreads) bucketThread.start();
 		for (var bucketThread: bucketThreads) bucketThread.join();
 		buffer.signalNoMoreBuckets();
 
-		assertEquals("all messages should be written", expectedMessageCount, outputData.size());
+		assertEquals("all messages should be written",
+				expectedMessageCount, outputData.size());
 		assertTrue("messages should be written in order",
 				Comparators.isInStrictOrder(outputData, messageComparator));
-		assertEquals("stream should be closed 1 time", 1, closeCount.get());
+		assertEquals("stream should be closed 1 time",
+				1, closeCount.get());
 	}
 
-	int bucketCount;
-
-	private Thread newBucketThread(int numberOfMessages) {
+	Thread newBucketThread(int[] bucketCountHolder, int numberOfMessages) {
 		return new Thread(() -> {
 			int bucketNumber;
 			OutputStream<Message> bucket;
 			synchronized (OrderedConcurrentOutputBufferTests.this) {
-				bucketNumber = ++bucketCount;
+				bucketNumber = ++bucketCountHolder[0];
 				if (log.isLoggable(Level.FINER)) log.finer("adding bucket " + bucketNumber);
 				bucket = buffer.addBucket();
 			}
@@ -147,9 +171,7 @@ public class OrderedConcurrentOutputBufferTests {
 					Thread.sleep(100L);
 				} catch (InterruptedException ignored) {}
 			}
-			for (int i = 0; i < numberOfMessages; i++) {
-				bucket.write(nextMessage(bucketNumber));
-			}
+			for (int i = 0; i < numberOfMessages; i++) bucket.write(nextMessage(bucketNumber));
 			if (log.isLoggable(Level.FINER)) log.finer("closing bucket " + bucketNumber);
 			bucket.close();
 		});
@@ -176,12 +198,13 @@ public class OrderedConcurrentOutputBufferTests {
 			var bucket = buffer.addBucket();
 			var t1 = new Thread(bucket::close);
 			var t2 = new Thread(buffer::signalNoMoreBuckets);
+
 			t1.start();
 			t2.start();
 			t1.join();
 			t2.join();
-
-			assertEquals("stream should be closed 1 time", 1, closeCount.get());
+			assertEquals("stream should be closed 1 time",
+					1, closeCount.get());
 		}
 	}
 
@@ -216,35 +239,34 @@ public class OrderedConcurrentOutputBufferTests {
 			buffer.signalNoMoreBuckets();
 			var t1 = new Thread(bucket1::close);
 			var t2 = new Thread(bucket2::close);
+
 			t1.start();
 			t2.start();
 			t1.join();
 			t2.join();
-
-			assertEquals("all messages should be written", 2, outputData.size());
+			assertEquals("all messages should be written",
+					2, outputData.size());
 			assertTrue("messages should be written in order",
 					Comparators.isInStrictOrder(outputData, messageComparator));
-			assertEquals("stream should be closed 1 time", 1, closeCount.get());
+			assertEquals("stream should be closed 1 time",
+					1, closeCount.get());
 		}
 	}
 
 
 
 	@Test
-	public void testAddBucketAndSignalWhileClosingTail()
-			throws Throwable {
+	public void testAddBucketAndSignalWhileClosingTail() throws Throwable {
 		testAddBucketAndSignalWhileClosingTail(200);
 	}
 
 	@Test
 	@Category({SlowTests.class})
-	public void testAddBucketAndSignalWhileClosingTail20kTries()
-			throws Throwable {
+	public void testAddBucketAndSignalWhileClosingTail20kTries() throws Throwable {
 		testAddBucketAndSignalWhileClosingTail(50_000);
 	}
 
-	public void testAddBucketAndSignalWhileClosingTail(int numberOfTries)
-			throws Throwable {
+	public void testAddBucketAndSignalWhileClosingTail(int numberOfTries) throws Throwable {
 		// tries to trigger a race condition that was causing output to be closed too early
 		for (int i = 0; i < numberOfTries; i++) {
 			setup();
@@ -275,36 +297,35 @@ public class OrderedConcurrentOutputBufferTests {
 					}
 				}
 			);
+
 			t1.start();
 			t2.start();
 			t1.join();
 			t2.join();
-
 			if (asyncError != null) throw asyncError;
-			assertEquals("all messages should be written", 2, outputData.size());
+			assertEquals("all messages should be written",
+					2, outputData.size());
 			assertTrue("messages should be written in order",
 					Comparators.isInStrictOrder(outputData, messageComparator));
-			assertEquals("stream should be closed 1 time", 1, closeCount.get());
+			assertEquals("stream should be closed 1 time",
+					1, closeCount.get());
 		}
 	}
 
 
 
 	@Test
-	public void testAddBucketAndSignalWhileFlushingTail()
-			throws Throwable {
+	public void testAddBucketAndSignalWhileFlushingTail() throws Throwable {
 		testAddBucketAndSignalWhileFlushingTail(100);
 	}
 
 	@Test
 	@Category({SlowTests.class})
-	public void testAddBucketAndSignalWhileFlushingTail50kTries()
-			throws Throwable {
+	public void testAddBucketAndSignalWhileFlushingTail50kTries() throws Throwable {
 		testAddBucketAndSignalWhileFlushingTail(50_000);
 	}
 
-	public void testAddBucketAndSignalWhileFlushingTail(int numberOfTries)
-			throws Throwable {
+	public void testAddBucketAndSignalWhileFlushingTail(int numberOfTries) throws Throwable {
 		// tries to trigger a race condition that was causing output to be closed too early
 		for (int i = 0; i < numberOfTries; i++) {
 			setup();
@@ -323,28 +344,32 @@ public class OrderedConcurrentOutputBufferTests {
 					}
 				}
 			);
-			final var t2 = new Thread(() -> {
-				try {
-					bothThreadsStartedBarrier.await(100L, TimeUnit.MILLISECONDS);
-					final var bucket3 = buffer.addBucket();
-					buffer.signalNoMoreBuckets();
-					t1.join();
-					bucket3.write(new Message(3, 1));
-					bucket3.close();
-				} catch (Throwable e) {
-					asyncError = e;
+			final var t2 = new Thread(
+				() -> {
+					try {
+						bothThreadsStartedBarrier.await(100L, TimeUnit.MILLISECONDS);
+						final var bucket3 = buffer.addBucket();
+						buffer.signalNoMoreBuckets();
+						t1.join();
+						bucket3.write(new Message(3, 1));
+						bucket3.close();
+					} catch (Throwable e) {
+						asyncError = e;
+					}
 				}
-			});
+			);
+
 			t1.start();
 			t2.start();
 			t1.join();
 			t2.join();
-
 			if (asyncError != null) throw asyncError;
-			assertEquals("all messages should be written", 2, outputData.size());
+			assertEquals("all messages should be written",
+					2, outputData.size());
 			assertTrue("messages should be written in order",
 					Comparators.isInStrictOrder(outputData, messageComparator));
-			assertEquals("stream should be closed 1 time", 1, closeCount.get());
+			assertEquals("stream should be closed 1 time",
+					1, closeCount.get());
 		}
 	}
 
@@ -352,7 +377,7 @@ public class OrderedConcurrentOutputBufferTests {
 
 	@Test
 	public void testWriteMessageToClosedBucket() {
-		OutputStream<Message> bucket = buffer.addBucket();
+		final var bucket = buffer.addBucket();
 		bucket.close();
 		try {
 			bucket.write(new Message(666, 666));
@@ -364,7 +389,7 @@ public class OrderedConcurrentOutputBufferTests {
 
 	@Test
 	public void testDoubleCloseBucket() {
-		OutputStream<Message> bucket = buffer.addBucket();
+		final var bucket = buffer.addBucket();
 		bucket.close();
 		try {
 			bucket.close();
@@ -396,40 +421,9 @@ public class OrderedConcurrentOutputBufferTests {
 			this.number = number;
 		}
 
-		@Override
-		public String toString() {
+		@Override public String toString() {
 			return "msg-" + bucket + '-' + number;
 		}
-	}
-
-
-
-	static final Comparator<Message> messageComparator =
-			Comparator.comparingInt((Message msg) -> msg.bucket)
-					.thenComparingInt(msg -> msg.number);
-
-
-
-	@Before
-	public void setup() {
-		outputData = new LinkedList<>();
-		closeCount = new AtomicInteger(0);
-		outputStream = new OutputStream<>() {
-
-			@Override
-			public void write(Message message) {
-				if (closeCount.get() > 0) throw new IllegalStateException("output already closed");
-				outputData.add(message);
-				if (log.isLoggable(Level.FINEST)) log.finest(message.toString());
-			}
-
-			@Override
-			public void close() {
-				closeCount.incrementAndGet();
-				if (log.isLoggable(Level.FINER)) log.finer("closing output stream");
-			}
-		};
-		buffer = new OrderedConcurrentOutputBuffer<>(outputStream);
 	}
 
 
