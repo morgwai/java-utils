@@ -6,6 +6,8 @@ import java.util.concurrent.*;
 import org.junit.Test;
 import pl.morgwai.base.utils.concurrent.ScheduledTaskTrackingThreadPoolExecutor.ScheduledExecution;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertSame;
 
@@ -70,15 +72,15 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 		};
 		final var delayMillis = 10L;
 
-		final var scheduledExecution = scheduler.scheduleWithFixedDelay(
-				scheduledTask, 0L, delayMillis, TimeUnit.MILLISECONDS);
+		final var scheduledExecution =
+				scheduler.scheduleWithFixedDelay(scheduledTask, 0L, delayMillis, MILLISECONDS);
 		assertTrue("scheduledTask should run " + numberOfUnblockedRuns + " times without blocking",
 				taskEnteredTheBlockingCycle.await(
-						(delayMillis * numberOfUnblockedRuns) + 20L, TimeUnit.MILLISECONDS));
+						(delayMillis * numberOfUnblockedRuns) + 20L, MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
-				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
+				testSubject.awaitTermination(20L, MILLISECONDS));
 		assertFalse("scheduledExecution should not complete",
 				scheduledExecution.isDone());
 
@@ -89,13 +91,13 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 		assertSame("runningTask should be wrapping scheduledTask",
 				scheduledTask, runningTask);
 		try {
-			scheduledExecution.get(20L, TimeUnit.MILLISECONDS);
+			scheduledExecution.get(20L, MILLISECONDS);
 			fail("CancellationException expected");
 		} catch (CancellationException expected) {}
 		assertTrue("scheduledExecution should complete after the forced shutdown",
 				scheduledExecution.isDone());
 		assertTrue("executor should terminate after the forced shutdown",
-				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
+				testSubject.awaitTermination(20L, MILLISECONDS));
 	}
 
 
@@ -121,14 +123,13 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 		};
 		final var delayMillis = 10L;
 
-		final var scheduledExecution = scheduler.schedule(
-				scheduledTask, delayMillis, TimeUnit.MILLISECONDS);
+		final var scheduledExecution = scheduler.schedule(scheduledTask, delayMillis, MILLISECONDS);
 		assertTrue("scheduledTask should start",
-				taskStarted.await(delayMillis + 20L, TimeUnit.MILLISECONDS));
+				taskStarted.await(delayMillis + 20L, MILLISECONDS));
 
 		testSubject.shutdown();
 		assertFalse("executor should not terminate",
-				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
+				testSubject.awaitTermination(20L, MILLISECONDS));
 		assertFalse("scheduledExecution should not complete",
 				scheduledExecution.isDone());
 
@@ -139,8 +140,8 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingEx
 		assertSame("runningTask should be wrapping scheduledTask",
 				scheduledTask, runningTask);
 		assertSame("scheduledExecution should return the same result as scheduledTask",
-				result, scheduledExecution.get(20L, TimeUnit.MILLISECONDS));
+				result, scheduledExecution.get(20L, MILLISECONDS));
 		assertTrue("executor should terminate after the forced shutdown",
-				testSubject.awaitTermination(20L, TimeUnit.MILLISECONDS));
+				testSubject.awaitTermination(20L, MILLISECONDS));
 	}
 }

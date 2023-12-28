@@ -9,6 +9,8 @@ import com.google.common.collect.Comparators;
 import org.junit.Test;
 import pl.morgwai.base.utils.concurrent.Awaitable.AwaitInterruptedException;
 
+import static java.util.concurrent.TimeUnit.*;
+
 import static org.junit.Assert.*;
 
 
@@ -40,8 +42,7 @@ public class AwaitableTests {
 		assertTrue("test data integrity check", tasksToFail.last() < NUMBER_OF_TASKS);
 
 		final List<Integer> failed = Awaitable.awaitMultiple(
-			5L,
-			TimeUnit.DAYS,
+			5L, DAYS,
 			IntStream.range(0, 20)
 				.boxed()
 				.map((i) -> Awaitable.newEntry(i, (timeout) -> !tasksToFail.contains(i)))
@@ -70,7 +71,7 @@ public class AwaitableTests {
 
 		assertTrue("all tasks should be marked as completed", Awaitable.awaitMultiple(
 			TOTAL_TIMEOUT_MILLIS,
-			TimeUnit.MILLISECONDS,
+			MILLISECONDS,
 			(timeout, unit) -> {
 				assertEquals("1st task should get the full timeout",
 						TOTAL_TIMEOUT_MILLIS, unit.toMillis(timeout));
@@ -144,7 +145,7 @@ public class AwaitableTests {
 				try {
 					Awaitable.awaitMultiple(
 						totalTimeoutMillis,
-						TimeUnit.MILLISECONDS,
+						MILLISECONDS,
 						Awaitable.newEntry(
 							0,
 							(timeoutMillis) -> {
@@ -159,7 +160,7 @@ public class AwaitableTests {
 							(timeoutMillis) -> {
 								taskExecuted[1] = true;
 								task1Started.countDown();
-								task1BlockingLatch.await(200L, TimeUnit.MILLISECONDS);
+								task1BlockingLatch.await(200L, MILLISECONDS);
 								fail("InterruptedException should be thrown");
 								return true;
 							}
@@ -209,7 +210,7 @@ public class AwaitableTests {
 
 		awaitingThread.start();
 		assertTrue("task-1 should start",
-				task1Started.await(100L, TimeUnit.MILLISECONDS));
+				task1Started.await(100L, MILLISECONDS));
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
 		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
@@ -294,7 +295,7 @@ public class AwaitableTests {
 
 		awaitingThread.start();
 		assertTrue("task-1 should start",
-				task1Started.await(100L, TimeUnit.MILLISECONDS));
+				task1Started.await(100L, MILLISECONDS));
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
 		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
@@ -305,8 +306,7 @@ public class AwaitableTests {
 
 	@Test
 	public void testAwaitableOfExecutorTermination() throws Throwable {
-		final var executor = new ThreadPoolExecutor(
-				2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>());
+		final var executor = new ThreadPoolExecutor(2, 2, 0L, SECONDS, new LinkedBlockingDeque<>());
 		final var taskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
 		executor.execute(
@@ -324,7 +324,7 @@ public class AwaitableTests {
 		assertFalse("executor should not be shutdown until termination is being awaited",
 				executor.isShutdown());
 		assertTrue("task should start",
-				taskStarted.await(100L, TimeUnit.MILLISECONDS));
+				taskStarted.await(100L, MILLISECONDS));
 
 		assertFalse("termination should fail if the task is not completed",
 				termination.await(20L));
@@ -345,8 +345,7 @@ public class AwaitableTests {
 
 	@Test
 	public void testAwaitableOfExecutorEnforcedTermination() throws Throwable {
-		final var executor = new ThreadPoolExecutor(
-				2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>());
+		final var executor = new ThreadPoolExecutor(2, 2, 0L, SECONDS, new LinkedBlockingDeque<>());
 		final var taskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
 		executor.execute(
@@ -362,15 +361,15 @@ public class AwaitableTests {
 		assertFalse("executor should not be shutdown until termination is being awaited",
 				executor.isShutdown());
 		assertTrue("task should start",
-				taskStarted.await(100L, TimeUnit.MILLISECONDS));
+				taskStarted.await(100L, MILLISECONDS));
 
 		executor.shutdown();
 		assertFalse("executor should not terminate if the task is stuck",
-				executor.awaitTermination(20L, TimeUnit.MILLISECONDS));
+				executor.awaitTermination(20L, MILLISECONDS));
 		assertFalse("enforcedTermination should report unclean termination",
 				enforcedTermination.await(20L));
 		assertTrue("executor should terminate after enforcedTermination",
-				executor.awaitTermination(20L, TimeUnit.MILLISECONDS));
+				executor.awaitTermination(20L, MILLISECONDS));
 	}
 
 
@@ -397,7 +396,7 @@ public class AwaitableTests {
 		final long timeoutNanos = 20_999_999L;  // almost 21ms
 		final long startMillis = System.currentTimeMillis();
 		assertFalse("joining should fail before taskBlockingLatch is lowered",
-				joining.await(timeoutNanos, TimeUnit.NANOSECONDS));
+				joining.await(timeoutNanos, NANOSECONDS));
 		assertTrue("timeout should be correctly converted",
 				System.currentTimeMillis() - startMillis > timeoutNanos / 1_000_000L);
 				// hopefully this will fail if 999_999 nanos are not passed correctly to join(...)
@@ -408,7 +407,7 @@ public class AwaitableTests {
 
 		taskBlockingLatch.countDown();
 		assertTrue("joining should succeed after switching taskBlockingLatch",
-				joining.await(timeoutNanos, TimeUnit.NANOSECONDS));
+				joining.await(timeoutNanos, NANOSECONDS));
 		assertFalse("thread should terminate after switching taskBlockingLatch",
 				thread.isAlive());
 		if (asyncError != null)  throw asyncError;
@@ -440,7 +439,7 @@ public class AwaitableTests {
 		}
 
 		assertTrue("all threads should start",  // sometimes threads start slowly...
-				allThreadsStarted.await(100L, TimeUnit.MILLISECONDS));
+				allThreadsStarted.await(100L, MILLISECONDS));
 		final var failed = Awaitable.awaitMultiple(
 			EXECUTION_DELAY_MILLIS + 20L,
 			Arrays.stream(threads).map(Awaitable.entryMapper(Awaitable::ofJoin))

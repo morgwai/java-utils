@@ -2,9 +2,10 @@
 package pl.morgwai.base.utils.concurrent;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import static org.junit.Assert.*;
 import static pl.morgwai.base.utils.concurrent.ConcurrentUtils.waitForMonitorCondition;
@@ -37,7 +38,7 @@ public class ConcurrentUtilsTests {
 		});
 		awaitingThread.start();
 		assertTrue("awaitingThread should start",
-				threadStarted.await(100L, TimeUnit.MILLISECONDS));
+				threadStarted.await(100L, MILLISECONDS));
 
 		awaitingThread.interrupt();
 		awaitingThread.join(20L);
@@ -91,7 +92,7 @@ public class ConcurrentUtilsTests {
 		});
 		awaitingThread.start();
 		assertTrue("awaitingThread should start",
-				threadStarted.await(100L, TimeUnit.MILLISECONDS));
+				threadStarted.await(100L, MILLISECONDS));
 
 		synchronized (monitor) {
 			monitor.notify();
