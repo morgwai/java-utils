@@ -4,7 +4,8 @@ package pl.morgwai.base.utils.concurrent;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 
 
@@ -84,8 +85,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
 		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
 				(tasks) -> tasks.stream()
-					.map(task -> ((TrackableTask) task).wrappedTask)
-					.collect(Collectors.toList());
+					.map((task) -> ((TrackableTask) task).wrappedTask)
+					.collect(toUnmodifiableList());
 
 
 
@@ -154,7 +155,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 				runningTasks.stream()
 					.map((holder) -> holder.task)
 					.filter(Objects::nonNull)
-					.collect(Collectors.toList()),
+					.collect(toUnmodifiableList()),
 				shutdownNow()
 			);
 		}
@@ -168,7 +169,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		ThreadLocal<TaskHolder> taskHolder = new ThreadLocal<>();
+		ThreadLocal<TaskHolder> threadLocalTaskHolder = new ThreadLocal<>();
 
 
 
@@ -183,13 +184,13 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * @see TaskTrackingThreadPoolExecutor TaskTrackingThreadPoolExecutor for a usage example.
 		 */
 		public void storeTaskIntoHolderBeforeExecute(Runnable task) {
-			var localHolder = taskHolder.get();
-			if (localHolder == null) {
-				localHolder = new TaskHolder();
-				taskHolder.set(localHolder);
-				runningTasks.add(localHolder);
+			var taskHolder = threadLocalTaskHolder.get();
+			if (taskHolder == null) {
+				taskHolder = new TaskHolder();
+				threadLocalTaskHolder.set(taskHolder);
+				runningTasks.add(taskHolder);
 			}
-			localHolder.task = task;
+			taskHolder.task = task;
 		}
 
 
@@ -201,7 +202,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * @see #storeTaskIntoHolderBeforeExecute(Runnable)
 		 */
 		public void clearTaskHolderAfterExecute() {
-			taskHolder.get().task = null;
+			threadLocalTaskHolder.get().task = null;
 		}
 
 
