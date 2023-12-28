@@ -3,7 +3,6 @@ package pl.morgwai.base.utils.concurrent;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Function;
 
 import static java.util.stream.Collectors.toUnmodifiableList;
 
@@ -82,11 +81,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		final Set<TaskHolder> runningTasks;
 		static class TaskHolder { volatile Runnable task; }
 
-		final Function<List<Runnable>, List<Runnable>> unwrapTasks;
-		static final Function<List<Runnable>, List<Runnable>> UNWRAP_TASKS =
-				(tasks) -> tasks.stream()
-					.map((task) -> ((TrackableTask) task).wrappedTask)
-					.collect(toUnmodifiableList());
+		final boolean delegatingExecute;
 
 
 
@@ -127,8 +122,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		public TaskTrackingExecutorDecorator(
 				ExecutorService executorToDecorate, boolean delegatingExecute, int threadPoolSize) {
 			runningTasks = ConcurrentHashMap.newKeySet(threadPoolSize);
-			unwrapTasks = delegatingExecute ? UNWRAP_TASKS : Function.identity();
 			this.backingExecutor = executorToDecorate;
+			this.delegatingExecute = delegatingExecute;
 		}
 
 
@@ -164,7 +159,12 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		@Override
 		public List<Runnable> shutdownNow() {
-			return unwrapTasks.apply(backingExecutor.shutdownNow());
+			return delegatingExecute
+					? backingExecutor.shutdownNow().stream()
+						.map(TrackableTask.class::cast)
+						.map(TrackableTask::getWrappedTask)
+						.collect(toUnmodifiableList())
+					: backingExecutor.shutdownNow();
 		}
 
 
