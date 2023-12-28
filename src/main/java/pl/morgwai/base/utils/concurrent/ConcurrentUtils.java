@@ -14,58 +14,6 @@ public interface ConcurrentUtils {
 
 
 	/**
-	 * Convenient version of {@link CompletableFuture#supplyAsync(Supplier, Executor)} that takes a
-	 * {@link Callable} instead of a {@link Supplier}. If {@link Callable#call() task.call()} throws
-	 * an exception, it will be pipelined to
-	 * {@link CompletableFuture#handle(BiFunction) handle(...)} /
-	 * {@link CompletableFuture#whenComplete(BiConsumer) whenComplete(...)} /
-	 * {@link CompletableFuture#exceptionally(Function) exceptionally(...)} chained calls.
-	 * <p>
-	 * Internally {@code task} is wrapped with a {@link RunnableCallable}, so in case
-	 * {@code executor} rejects {@code task} or {@link ExecutorService#shutdownNow()
-	 * executor.shutdownNow()} is called, {@link RunnableCallable#getWrappedTask()} can be used to
-	 * obtain the original.</p>
-	 */
-	static <T> CompletableFuture<T> completableFutureSupplyAsync(
-		Callable<T> task,
-		Executor executor
-	) {
-		final var execution = new CompletableFuture<T>();
-		executor.execute(new RunnableCallable<>(task) {
-			@Override public void run() {
-				try {
-					execution.complete(wrappedTask.call());
-				} catch (Exception e) {
-					execution.completeExceptionally(e);
-				}
-			}
-		});
-		return execution;
-	}
-
-
-
-	/**
-	 * Wrapper for {@link Callable} tasks passed to
-	 * {@link #completableFutureSupplyAsync(Callable, Executor)}.
-	 */
-	abstract class RunnableCallable<T> implements Runnable {
-
-		public Callable<T> getWrappedTask() { return wrappedTask; }
-		public final Callable<T> wrappedTask;
-
-		public RunnableCallable(Callable<T> taskToWrap) {
-			this.wrappedTask = taskToWrap;
-		}
-
-		@Override public String toString() {
-			return wrappedTask.toString();
-		}
-	}
-
-
-
-	/**
 	 * Similar to {@link Object#wait(long, int)}, but <b>not</b> affected by <i>spurious wakeup</i>
 	 * nor by {@link Object#notifyAll() notifications} not related to {@code condition}.
 	 * The calling thread must already own {@code monitor}'s lock, similarly when calling
@@ -116,5 +64,37 @@ public interface ConcurrentUtils {
 		long timeoutMillis
 	) throws InterruptedException {
 		return waitForMonitorCondition(monitor, condition, timeoutMillis, TimeUnit.MILLISECONDS);
+	}
+
+
+
+	/** @deprecated use {@link CallableTaskExecution#callAsync(Callable, Executor)} instead. */
+	@Deprecated(forRemoval = true)
+	static <T> CompletableFuture<T> completableFutureSupplyAsync(
+		Callable<T> task,
+		Executor executor
+	) {
+		final var taskExecution = new RunnableCallable<>(task);
+		executor.execute(taskExecution);
+		return taskExecution;
+	}
+
+
+
+	/** @deprecated use {@link CallableTaskExecution} instead. */
+	@Deprecated(forRemoval = true)
+	class RunnableCallable<T> extends CallableTaskExecution<T> {
+
+		public Callable<T> getWrappedTask() { return wrappedTask; }
+		public final Callable<T> wrappedTask;
+
+		public RunnableCallable(Callable<T> taskToWrap) {
+			super(taskToWrap);
+			this.wrappedTask = taskToWrap;
+		}
+
+		@Override public String toString() {
+			return super.toString();
+		}
 	}
 }
