@@ -179,20 +179,20 @@ public interface Awaitable {
 		final var interruptedTasks = new LinkedList<T>();
 		boolean interrupted = false;
 		while (awaitableEntries.hasNext()) {
-			final var operationEntry = awaitableEntries.next();
+			final var awaitableEntry = awaitableEntries.next();
 			try {
 				if (
-					!operationEntry.operation.toAwaitableWithUnit()
+					!awaitableEntry.operation.toAwaitableWithUnit()
 							.await(remainingNanos, TimeUnit.NANOSECONDS)
 				) {
-					failedTasks.add(operationEntry.object);
+					failedTasks.add(awaitableEntry.object);
 				}
 				if (remainingNanos > 1L) {
 					remainingNanos = deadlineNanos - System.nanoTime();
 					if (remainingNanos < 1L) remainingNanos = 1L;
 				}
 			} catch (InterruptedException e) {
-				interruptedTasks.add(operationEntry.object);
+				interruptedTasks.add(awaitableEntry.object);
 				if ( !continueOnInterrupt) {
 					throw new AwaitInterruptedException(
 							failedTasks, interruptedTasks, awaitableEntries);
