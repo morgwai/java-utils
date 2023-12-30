@@ -14,7 +14,7 @@ import java.util.stream.Stream;
  * {@link Thread#join(long)}, {@link Object#wait(long)},
  * {@link ExecutorService#awaitTermination(long, TimeUnit)} etc.
  * Useful for awaiting for multiple such operations within a joint timeout: see
- * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...) method family}.
+ * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...) function family}.
  */
 @FunctionalInterface
 public interface Awaitable {
@@ -57,7 +57,7 @@ public interface Awaitable {
 			return await(timeoutMillis, TimeUnit.MILLISECONDS);
 		}
 
-		/** Returns this. */
+		/** Returns {@code this}. */
 		@Override
 		default Awaitable.WithUnit toAwaitableWithUnit() {
 			return this;
@@ -72,8 +72,8 @@ public interface Awaitable {
 	 * the operation will wait forever for the thread to finish, similarly to the semantics of
 	 * {@link Thread#join(long) join(0)} (note that non of the
 	 * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} methods will ever pass {@code 0} to
-	 * any of its operations as a result of time passing, only if {@code 0} was originally passed as
-	 * {@code timeout}).
+	 * any of its operations as a result of real time flow, except if {@code 0} was originally
+	 * passed as combined {@code timeout}).
 	 */
 	static Awaitable.WithUnit ofJoin(Thread thread) {
 		return (timeout, unit) -> {
@@ -124,11 +124,12 @@ public interface Awaitable {
 
 	/**
 	 * Awaits for multiple {@link Awaitable timed blocking operations} specified by
-	 * {@code awaitableEntries}. Each {@link Entry Entry} maps an {@link Entry#getObject() object}
-	 * on which an operation should be performed (for example a {@link Thread}
-	 * to be {@link Thread#join(long) joined} or an {@link ExecutorService executor} to be
-	 * {@link ExecutorService#awaitTermination(long, TimeUnit) terminated})
-	 * to a {@link Entry#getOperation() closure performing this operation}.
+	 * {@code awaitableEntries}.
+	 * Each {@link Entry Entry} maps an {@link Entry#getObject() object} on which an operation
+	 * should be performed (for example a {@link Thread} to be {@link Thread#join(long) joined} or
+	 * an {@link ExecutorService executor} to be
+	 * {@link ExecutorService#awaitTermination(long, TimeUnit) terminated}) to a
+	 * {@link Entry#getOperation() closure performing this operation}.
 	 * <p>
 	 * If {@code timeout} passes before all operations are completed, continues to perform the
 	 * remaining ones with {@code 1} nanosecond timeout.<br/>
@@ -234,6 +235,7 @@ public interface Awaitable {
 
 
 
+	/** Saves few chars when {@link Stream#map(Function) mapping streams} to {@link Entry}s. */
 	static <T> Function<T, Entry<T>> entryMapper(Function<? super T, ? extends Awaitable> adapter) {
 		return (t) -> newEntry(t, adapter.apply(t));
 	}
@@ -242,9 +244,8 @@ public interface Awaitable {
 
 	/**
 	 * An {@link InterruptedException} that contains results of
-	 * {@link Awaitable Awaitable operations} passed to one of
-	 * {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultipe(...)
-	 * functions} that was interrupted.
+	 * {@link Awaitable Awaitable operations} passed to an interrupted
+	 * {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultipe(...)}.
 	 */
 	class AwaitInterruptedException extends InterruptedException {
 

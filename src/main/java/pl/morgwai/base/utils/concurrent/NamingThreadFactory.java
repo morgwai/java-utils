@@ -9,7 +9,8 @@ import java.util.function.IntFunction;
 
 /**
  * A factory that names new {@link Thread}s based on constructor supplied generator/name.
- * Each instance has an associated thread group, which newly created threads will belong to.
+ * Each instance has an associated {@link ThreadGroup}, which newly created {@link Thread}s will
+ * belong to.
  */
 public class NamingThreadFactory implements ThreadFactory {
 

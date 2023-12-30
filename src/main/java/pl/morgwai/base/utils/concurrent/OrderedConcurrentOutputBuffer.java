@@ -9,9 +9,9 @@ import java.util.List;
 /**
  * Buffers messages until all of those that should be written before to
  * {@link OutputStream the underlying output stream} are available, so that they all can be
- * {@link OutputStream#write(Object) written} in the desired order. Useful for processing input
- * streams in several concurrent threads when the order of the resulting outbound messages must
- * reflect the order of the inbound messages.
+ * {@link OutputStream#write(Object) written} in the desired order.
+ * Useful for processing input streams in several concurrent threads when the order of the resulting
+ * outbound messages must reflect the order of the inbound messages.
  * <p>
  * A buffer consists of ordered buckets that implement {@link OutputStream} just as the underlying
  * output stream passed to {@link #OrderedConcurrentOutputBuffer(OutputStream) the constructor}.
@@ -192,7 +192,7 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 			synchronized (lock) {
 				if (closed) throw new IllegalStateException(BUCKET_CLOSED_MESSAGE);
 				closed = true;
-				// if this is the head bucket, then flush the subsequent continuous closed chain
+				// if this was the head bucket, then flush the subsequent continuous closed chain
 				if (buffer == null) next.flush();
 			}
 		}
@@ -212,7 +212,7 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 		 */
 		private void flush() {
 			synchronized (lock) {
-				for (MessageT bufferedMessage: buffer) output.write(bufferedMessage);
+				for (var bufferedMessage: buffer) output.write(bufferedMessage);
 				buffer = null;
 				if (next != null) {
 					if (closed) next.flush();
