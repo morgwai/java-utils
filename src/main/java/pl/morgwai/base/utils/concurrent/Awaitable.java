@@ -248,13 +248,13 @@ public interface Awaitable {
 	 */
 	class AwaitInterruptedException extends InterruptedException {
 
-		final List<?> failed;
+		public final List<?> failed;
 		public List<?> getFailed() { return failed; }
 
-		final List<?> interrupted;
+		public final List<?> interrupted;
 		public List<?> getInterrupted() { return interrupted; }
 
-		final Iterator<Entry<?>> unexecuted;
+		public final Iterator<Entry<?>> unexecuted;
 		public Iterator<Entry<?>> getUnexecuted() { return unexecuted; }
 
 		public <T> AwaitInterruptedException(
@@ -269,7 +269,7 @@ public interface Awaitable {
 			this.unexecuted = tmp;
 		}
 
-		private static final long serialVersionUID = 7789960838639260958L;
+		private static final long serialVersionUID = -5981514983898337530L;
 	}
 
 
