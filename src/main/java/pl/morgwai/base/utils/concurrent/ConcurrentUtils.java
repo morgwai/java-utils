@@ -65,36 +65,4 @@ public interface ConcurrentUtils {
 	) throws InterruptedException {
 		return waitForMonitorCondition(monitor, condition, timeoutMillis, TimeUnit.MILLISECONDS);
 	}
-
-
-
-	/** @deprecated use {@link CallableTaskExecution#callAsync(Callable, Executor)} instead. */
-	@Deprecated(forRemoval = true)
-	static <T> CompletableFuture<T> completableFutureSupplyAsync(
-		Callable<T> task,
-		Executor executor
-	) {
-		final var taskExecution = new RunnableCallable<>(task);
-		executor.execute(taskExecution);
-		return taskExecution;
-	}
-
-
-
-	/** @deprecated use {@link CallableTaskExecution} instead. */
-	@Deprecated(forRemoval = true)
-	class RunnableCallable<T> extends CallableTaskExecution<T> {
-
-		public Callable<T> getWrappedTask() { return wrappedTask; }
-		public final Callable<T> wrappedTask;
-
-		public RunnableCallable(Callable<T> taskToWrap) {
-			super(taskToWrap);
-			this.wrappedTask = taskToWrap;
-		}
-
-		@Override public String toString() {
-			return super.toString();
-		}
-	}
 }

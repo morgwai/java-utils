@@ -165,9 +165,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/** @deprecated use {@link #TaskTrackingExecutorDecorator(HookableExecutor, int)} instead.*/
-		@Deprecated(forRemoval = true)
-		public TaskTrackingExecutorDecorator(
+		TaskTrackingExecutorDecorator(
 			ExecutorService executorToDecorate,
 			boolean delegatingExecute,
 			int threadPoolSize
@@ -209,9 +207,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/** @deprecated use {@link #TaskTrackingExecutorDecorator(HookableExecutor, int)}. */
-		@Deprecated(forRemoval = true)
-		public void storeTaskIntoHolderBeforeExecute(Runnable task) {
+		void storeTaskIntoHolderBeforeExecute(Runnable task) {
 			var taskHolder = threadLocalTaskHolder.get();
 			if (taskHolder == null) {
 				taskHolder = new TaskHolder();
@@ -223,9 +219,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/** @deprecated use {@link #TaskTrackingExecutorDecorator(HookableExecutor, int)}. */
-		@Deprecated(forRemoval = true)
-		public void clearTaskHolderAfterExecute() {
+		void clearTaskHolderAfterExecute() {
 			threadLocalTaskHolder.get().task = null;
 		}
 
