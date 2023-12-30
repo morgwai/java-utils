@@ -38,6 +38,13 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
+	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests} */
+	protected Object unwrapIfScheduled(Runnable task) {
+		return task;
+	}
+
+
+
 	@Before
 	public void setup() {
 		taskBlockingLatch = new CountDownLatch(1);
@@ -46,27 +53,6 @@ public abstract class TaskTrackingExecutorTests {
 
 	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
 			int threadPoolSize, int queueSize);
-
-
-
-	@After
-	public void tryTerminate() {
-		testSubject.shutdown();
-		taskBlockingLatch.countDown();
-		try {
-			testSubject.awaitTermination(50L, MILLISECONDS);
-		} catch (InterruptedException ignored) {
-		} finally {
-			if ( !testSubject.isTerminated()) testSubject.shutdownNow();
-		}
-	}
-
-
-
-	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests} */
-	protected Object unwrapIfScheduled(Runnable task) {
-		return task;
-	}
 
 
 
@@ -375,6 +361,20 @@ public abstract class TaskTrackingExecutorTests {
 					+ executor.getClass().getSimpleName() + " took " + durationMillis + "ms");
 		}
 		return durationMillis;
+	}
+
+
+
+	@After
+	public void tryTerminate() {
+		testSubject.shutdown();
+		taskBlockingLatch.countDown();
+		try {
+			testSubject.awaitTermination(50L, MILLISECONDS);
+		} catch (InterruptedException ignored) {
+		} finally {
+			if ( !testSubject.isTerminated()) testSubject.shutdownNow();
+		}
 	}
 
 

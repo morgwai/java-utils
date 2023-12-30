@@ -13,7 +13,8 @@ import static org.junit.Assert.assertSame;
 
 
 
-public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingExecutorTests {
+public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExecutorTests
+{
 
 
 

@@ -1,7 +1,11 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.utils.concurrent;
 
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BiConsumer;
+
+import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator;
 
 
 
@@ -18,7 +22,7 @@ java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">
  * the comment with an explanation in the source</a>.</p>
  */
 public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPoolExecutor
-		implements TaskTrackingExecutor {
+		implements TaskTrackingExecutor, TaskTrackingExecutorDecorator.HookableExecutor {
 
 
 
@@ -28,23 +32,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 	public ScheduledTaskTrackingThreadPoolExecutor(int corePoolSize) {
 		super(corePoolSize);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
-	}
-
-
-
-	/** Subclasses must call {@code super}. */
-	@Override
-	protected void beforeExecute(Thread worker, Runnable task) {
-		taskTrackingDecorator.storeTaskIntoHolderBeforeExecute(task);
-	}
-
-
-
-	/** Subclasses must call {@code super}. */
-	@Override
-	protected void afterExecute(Runnable task, Throwable error) {
-		taskTrackingDecorator.clearTaskHolderAfterExecute();
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
 	}
 
 
@@ -52,6 +40,42 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	@Override
 	public ForcedTerminationAftermath tryForceTerminate() {
 		return taskTrackingDecorator.tryForceTerminate();
+	}
+
+
+
+	final Deque<BiConsumer<Thread, Runnable>> beforeExecuteHooks = new LinkedList<>();
+
+	/** Adds {@code hook} to be executed in {@link #beforeExecute(Thread, Runnable)}. */
+	public void addBeforeExecuteHook(BiConsumer<Thread, Runnable> hook) {
+		beforeExecuteHooks.addFirst(hook);
+	}
+
+	/**
+	 * Executes all {@link #addBeforeExecuteHook(BiConsumer) added hooks} in the reverse order they
+	 * were added.
+	 */
+	@Override
+	protected final void beforeExecute(Thread worker, Runnable task) {
+		beforeExecuteHooks.forEach((hook) -> hook.accept(worker, task));
+	}
+
+
+
+	final List<BiConsumer<Runnable, Throwable>> afterExecuteHooks = new LinkedList<>();
+
+	/** Adds hook to be executed in {@link #afterExecute(Runnable, Throwable)}. */
+	public void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook) {
+		afterExecuteHooks.add(hook);
+	}
+
+	/**
+	 * Executes all {@link #addAfterExecuteHook(BiConsumer)}  added hooks} in the order they were
+	 * added.
+	 */
+	@Override
+	protected final void afterExecute(Runnable task, Throwable error) {
+		afterExecuteHooks.forEach((hook) -> hook.accept(task, error));
 	}
 
 
@@ -134,7 +158,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 	public ScheduledTaskTrackingThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory) {
 		super(corePoolSize, threadFactory);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
 	}
 
 
@@ -142,7 +166,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	public ScheduledTaskTrackingThreadPoolExecutor(
 			int corePoolSize, RejectedExecutionHandler handler) {
 		super(corePoolSize, handler);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
 	}
 
 
@@ -150,6 +174,6 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	public ScheduledTaskTrackingThreadPoolExecutor(
 			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
 		super(corePoolSize, threadFactory, handler);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, false, corePoolSize);
+		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
 	}
 }
