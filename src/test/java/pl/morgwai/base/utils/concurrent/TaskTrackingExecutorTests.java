@@ -9,7 +9,7 @@ import org.junit.*;
 import org.junit.experimental.categories.Category;
 import pl.morgwai.base.utils.SlowTests;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.*;
 
 import static org.junit.Assert.*;
 import static pl.morgwai.base.utils.concurrent.CallableTaskExecution.callAsync;
@@ -312,14 +312,26 @@ public abstract class TaskTrackingExecutorTests {
 		double expectedPerformanceFactor
 	) throws InterruptedException {
 		final var threadPoolSize = Runtime.getRuntime().availableProcessors();
-		final var threadPoolExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
-				TimeUnit.DAYS, new LinkedBlockingQueue<>(numberOfTasks));
+		final var threadPoolExecutor = new ThreadPoolExecutor(
+				threadPoolSize, threadPoolSize, 0L, DAYS, new LinkedBlockingQueue<>(numberOfTasks));
+		testSubject.shutdown();
+		testSubject = createTestSubjectAndFinishSetup(threadPoolSize, numberOfTasks);
+		final Runnable warmupTask = () -> {
+			try {
+				taskBlockingLatch.await();
+			} catch (InterruptedException ignored) {}
+		};
+		for (int i = 0; i < threadPoolSize; i++) {
+			testSubject.execute(warmupTask);
+			threadPoolExecutor.execute(warmupTask);
+		}
+		taskBlockingLatch.countDown();
+
 		final var threadPoolExecutorDuration =
 				measurePerformance(threadPoolExecutor, numberOfTasks, taskDurationMillis);
-		testSubject = createTestSubjectAndFinishSetup(threadPoolSize, numberOfTasks);
 		final var testSubjectDuration =
 				measurePerformance(testSubject, numberOfTasks, taskDurationMillis);
-		final var performanceFactor = ((double)testSubjectDuration) / threadPoolExecutorDuration;
+		final var performanceFactor = ((double) testSubjectDuration) / threadPoolExecutorDuration;
 		if (log.isLoggable(Level.INFO)) log.info(String.format(
 			"%dk of %dms-tasks on %s resulted with %.3fx performanceFactor",
 			numberOfTasks / 1000,
@@ -328,8 +340,11 @@ public abstract class TaskTrackingExecutorTests {
 			performanceFactor
 		));
 		assertTrue(
-			"task tracing should not be more than " + expectedPerformanceFactor + " times slower"
-					+ " (was " + performanceFactor + "x)",
+			String.format(
+				"task tracing should not be more than %.3f times slower (was %.3fx)",
+				expectedPerformanceFactor,
+				performanceFactor
+			),
 			expectedPerformanceFactor > performanceFactor
 		);
 	}
@@ -339,11 +354,6 @@ public abstract class TaskTrackingExecutorTests {
 		int numberOfTasks,
 		long taskDurationMillis
 	) throws InterruptedException {
-		final var warmupCount = 5;
-		final var warmupDone = new CountDownLatch(warmupCount);
-		for (int i = 0; i < warmupCount; i++) executor.execute(warmupDone::countDown);
-		assertTrue("warmup should be fast",
-				warmupDone.await(100L, MILLISECONDS));
 		final Runnable testTask = () -> {
 			try {
 				Thread.sleep(taskDurationMillis);
@@ -354,12 +364,15 @@ public abstract class TaskTrackingExecutorTests {
 		for (int i = 0; i < numberOfTasks; i++) executor.execute(testTask);
 		executor.shutdown();
 		assertTrue("executor should terminate in a reasonable time",
-				executor.awaitTermination(100L, TimeUnit.SECONDS));
+				executor.awaitTermination(100L, SECONDS));
 		final var durationMillis = System.currentTimeMillis() - startMillis;
-		if (log.isLoggable(Level.INFO)) {
-			log.info((numberOfTasks / 1000) + "k of " + taskDurationMillis + "ms-tasks on "
-					+ executor.getClass().getSimpleName() + " took " + durationMillis + "ms");
-		}
+		if (log.isLoggable(Level.INFO)) log.info(String.format(
+			"%dk of %dms-tasks on %s took %dms",
+			(numberOfTasks / 1000),
+			taskDurationMillis,
+			executor.getClass().getSimpleName(),
+			durationMillis
+		));
 		return durationMillis;
 	}
 
