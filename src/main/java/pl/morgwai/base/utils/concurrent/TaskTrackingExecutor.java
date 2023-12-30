@@ -91,7 +91,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 */
 		public TaskTrackingExecutorDecorator(ExecutorService executorToDecorate, int threadPoolSize)
 		{
-			this(executorToDecorate, true, threadPoolSize);
+			this(executorToDecorate, false, threadPoolSize);
 		}
 
 
@@ -109,7 +109,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		 * decorateRejectedExecutionHandler(executorToDecorate)}.
 		 */
 		public TaskTrackingExecutorDecorator(ThreadPoolExecutor executorToDecorate) {
-			this(executorToDecorate, true, executorToDecorate.getCorePoolSize());
+			this(executorToDecorate, false, executorToDecorate.getCorePoolSize());
 			decorateRejectedExecutionHandler(executorToDecorate);
 		}
 
@@ -147,7 +147,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			HookableExecutor executorToDecorate,
 			int threadPoolSize
 		) {
-			this(executorToDecorate, false, threadPoolSize);
+			this(executorToDecorate, true, threadPoolSize);
 			executorToDecorate.addBeforeExecuteHook(
 					(thread, task) -> storeTaskIntoHolderBeforeExecute(task));
 			executorToDecorate.addAfterExecuteHook((task, error) -> clearTaskHolderAfterExecute());
@@ -167,13 +167,13 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		TaskTrackingExecutorDecorator(
 			ExecutorService executorToDecorate,
-			boolean delegatingExecute,
+			boolean backingExecutorHookable,
 			int threadPoolSize
 		) {
 			runningTasks = (threadPoolSize > 0)
 					? ConcurrentHashMap.newKeySet(threadPoolSize) : ConcurrentHashMap.newKeySet();
 			this.backingExecutor = executorToDecorate;
-			this.backingExecutorHookable = !delegatingExecute;
+			this.backingExecutorHookable = backingExecutorHookable;
 		}
 
 
