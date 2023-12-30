@@ -19,7 +19,6 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 		final var backingExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
 				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = backingExecutor;
-		expectedNoopTaskPerformanceFactor = 1.4d;
 		return new TaskTrackingExecutorDecorator(backingExecutor);
 	}
 }

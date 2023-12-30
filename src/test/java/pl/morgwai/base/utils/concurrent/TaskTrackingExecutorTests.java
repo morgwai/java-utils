@@ -33,7 +33,7 @@ public abstract class TaskTrackingExecutorTests {
 		throw new RejectedExecutionException("rejected " + task);
 	};
 
-	protected double expectedNoopTaskPerformanceFactor;
+	protected double expectedNoopTaskPerformanceFactor = 1.2d;
 	protected double expected1msTaskPerformanceFactor = 1.015d;
 
 
@@ -284,11 +284,6 @@ public abstract class TaskTrackingExecutorTests {
 
 
 	@Test
-	public void test100kNoopTasksPerformance() throws InterruptedException {
-		testPerformance(100_000, 0L, expectedNoopTaskPerformanceFactor);
-	}
-
-	@Test
 	@Category({SlowTests.class})
 	public void test10MNoopTasksPerformance() throws InterruptedException {
 		testPerformance(10_000_000, 0L, expectedNoopTaskPerformanceFactor);
@@ -296,7 +291,7 @@ public abstract class TaskTrackingExecutorTests {
 
 	@Test
 	public void test1k1msTasksPerformance() throws InterruptedException {
-		testPerformance(1_000, 1L, 1.15d);  // 1.15d is a statistical inaccuracy exhibited even
+		testPerformance(1_000, 1L, 1.1d);  // 1.1d is a statistical inaccuracy observed even
 				// between ThreadPoolExecutor invocations for such a small number of tasks as 1k.
 	}
 

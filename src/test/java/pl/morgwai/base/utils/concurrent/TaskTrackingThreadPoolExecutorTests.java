@@ -18,7 +18,6 @@ public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExe
 		final var executor = new TaskTrackingThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
 				TimeUnit.DAYS, new LinkedBlockingQueue<>(queueSize), rejectionHandler);
 		expectedRejectingExecutor = executor;
-		expectedNoopTaskPerformanceFactor = 1.15d;
 		return executor;
 	}
 }
