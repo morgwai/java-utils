@@ -79,17 +79,17 @@ public abstract class TaskTrackingExecutorTests {
 				return "blockingTask";
 			}
 		};
-		final var instantTask = new Callable<>() {
+		final var queuedTask = new Callable<>() {
 			@Override public Integer call()  {
 				return 0;
 			}
 			@Override public String toString() {
-				return "instantTask";
+				return "queuedTask";
 			}
 		};
 
 		final var blockingTaskExecution = callAsync(blockingTask, testSubject);
-		final var instantTaskExecution = callAsync(instantTask, testSubject);
+		final var instantTaskExecution = callAsync(queuedTask, testSubject);
 		assertTrue("blockingTask should start",
 				blockingTaskStarted.await(20L, MILLISECONDS));
 
@@ -98,7 +98,7 @@ public abstract class TaskTrackingExecutorTests {
 				testSubject.awaitTermination(20L, MILLISECONDS));
 		assertFalse("blockingTaskExecution should not complete",
 				blockingTaskExecution.isDone());
-		assertFalse("instantTask should not be executed",
+		assertFalse("queuedTask should not be executed",
 				instantTaskExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
@@ -114,8 +114,8 @@ public abstract class TaskTrackingExecutorTests {
 				unexecutedTask instanceof CallableTaskExecution);
 		assertSame("runningTask should be blockingTask",
 				blockingTask, ((CallableTaskExecution<?>) runningTask).getTask());
-		assertSame("unexecutedTask should be instantTask",
-				instantTask, ((CallableTaskExecution<?>) unexecutedTask).getTask());
+		assertSame("unexecutedTask should be queuedTask",
+				queuedTask, ((CallableTaskExecution<?>) unexecutedTask).getTask());
 		try {
 			blockingTaskExecution.get(20L, MILLISECONDS);
 			fail("blockingTaskExecution should complete exceptionally");
@@ -152,17 +152,17 @@ public abstract class TaskTrackingExecutorTests {
 				return "blockingTask";
 			}
 		};
-		final var instantTask = new Callable<>() {
+		final var queuedTask = new Callable<>() {
 			@Override public Integer call()  {
 				return 0;
 			}
 			@Override public String toString() {
-				return "instantTask";
+				return "queuedTask";
 			}
 		};
 
 		final var blockingTaskExecution = callAsync(blockingTask, testSubject);
-		final var instantTaskExecution = callAsync(instantTask, testSubject);
+		final var instantTaskExecution = callAsync(queuedTask, testSubject);
 		assertTrue("blockingTask should start",
 				blockingTaskStarted.await(20L, MILLISECONDS));
 
@@ -171,7 +171,7 @@ public abstract class TaskTrackingExecutorTests {
 				testSubject.awaitTermination(20L, MILLISECONDS));
 		assertFalse("blockingTaskExecution should not complete",
 				blockingTaskExecution.isDone());
-		assertFalse("instantTask should not be executed", instantTaskExecution.isDone());
+		assertFalse("queuedTask should not be executed", instantTaskExecution.isDone());
 
 		final var aftermath = testSubject.tryForceTerminate();
 		assertEquals("1 task should be running in the aftermath",
@@ -186,8 +186,8 @@ public abstract class TaskTrackingExecutorTests {
 				unexecutedTask instanceof CallableTaskExecution);
 		assertSame("runningTask should be blockingTask",
 				blockingTask, ((CallableTaskExecution<?>) runningTask).getTask());
-		assertSame("unexecutedTask should be instantTask",
-				instantTask, ((CallableTaskExecution<?>) unexecutedTask).getTask());
+		assertSame("unexecutedTask should be queuedTask",
+				queuedTask, ((CallableTaskExecution<?>) unexecutedTask).getTask());
 		assertFalse("executor should not terminate even after the forced shutdown",
 				testSubject.awaitTermination(20L, MILLISECONDS));
 		assertFalse("blockingTaskExecution should not complete even after the forced shutdown",
@@ -205,9 +205,8 @@ public abstract class TaskTrackingExecutorTests {
 				blockingTask, ((CallableTaskExecution<?>) runningTask2).getTask());
 		assertFalse("executor should not terminate even after the 2nd forced shutdown",
 				testSubject.awaitTermination(20L, MILLISECONDS));
-		assertFalse(
-			"blockingTaskExecution should not complete even after the 2nd forced shutdown",
-			blockingTaskExecution.isDone()
+		assertFalse("blockingTaskExecution should not complete even after the 2nd forced shutdown",
+				blockingTaskExecution.isDone()
 		);
 
 		taskBlockingLatch.countDown();
