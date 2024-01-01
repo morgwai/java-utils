@@ -8,6 +8,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 
 
 /**
@@ -53,13 +56,13 @@ public interface Awaitable {
 		boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
 		default boolean await(Duration timeout) throws InterruptedException {
-			return await(timeout.toNanos(), TimeUnit.NANOSECONDS);
+			return await(timeout.toNanos(), NANOSECONDS);
 		}
 
 		/** Calls {@link #await(long, TimeUnit) await(timeoutMillis, TimeUnit.MILLISECONDS)}. */
 		@Override
 		default boolean await(long timeoutMillis) throws InterruptedException {
-			return await(timeoutMillis, TimeUnit.MILLISECONDS);
+			return await(timeoutMillis, MILLISECONDS);
 		}
 
 		/** Returns {@code this}. */
@@ -83,7 +86,7 @@ public interface Awaitable {
 	static Awaitable.WithUnit ofJoin(Thread thread) {
 		return (timeout, unit) -> {
 			final var timeoutMillis = unit.toMillis(timeout);
-			if (timeout == 0L || unit.ordinal() >= TimeUnit.MILLISECONDS.ordinal()) {
+			if (timeout == 0L || unit.ordinal() >= MILLISECONDS.ordinal()) {
 				thread.join(timeoutMillis);
 			} else {
 				thread.join(timeoutMillis, (int) (unit.toNanos(timeout) % 1_000_000L));
@@ -189,7 +192,7 @@ public interface Awaitable {
 			try {
 				if (
 					!awaitableEntry.operation.toAwaitableWithUnit()
-							.await(remainingNanos, TimeUnit.NANOSECONDS)
+							.await(remainingNanos, NANOSECONDS)
 				) {
 					failedTasks.add(awaitableEntry.object);
 				}
@@ -305,7 +308,7 @@ public interface Awaitable {
 	) throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
-			TimeUnit.MILLISECONDS,
+			MILLISECONDS,
 			continueOnInterrupt,
 			Arrays.asList(awaitableEntries).iterator()
 		);
@@ -324,7 +327,7 @@ public interface Awaitable {
 			throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
-			TimeUnit.MILLISECONDS,
+			MILLISECONDS,
 			true,
 			Arrays.asList(awaitableEntries).iterator()
 		);
@@ -350,7 +353,7 @@ public interface Awaitable {
 	) throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
-			TimeUnit.MILLISECONDS,
+			MILLISECONDS,
 			continueOnInterrupt,
 			awaitableEntries.iterator()
 		);
@@ -365,12 +368,7 @@ public interface Awaitable {
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
 	static <T> List<T> awaitMultiple(long timeoutMillis, Stream<Entry<T>> awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(
-			timeoutMillis,
-			TimeUnit.MILLISECONDS,
-			true,
-			awaitableEntries.iterator()
-		);
+		return awaitMultiple(timeoutMillis, MILLISECONDS, true, awaitableEntries.iterator());
 	}
 
 
@@ -400,7 +398,7 @@ public interface Awaitable {
 		boolean continueOnInterrupt,
 		Awaitable... operations
 	) throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, TimeUnit.MILLISECONDS, continueOnInterrupt, operations);
+		return awaitMultiple(timeoutMillis, MILLISECONDS, continueOnInterrupt, operations);
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
@@ -421,7 +419,7 @@ public interface Awaitable {
 	) throws AwaitInterruptedException {
 		return awaitMultiple(
 			timeoutMillis,
-			TimeUnit.MILLISECONDS,
+			MILLISECONDS,
 			continueOnInterrupt,
 			(Awaitable[]) operations
 		);
@@ -436,7 +434,7 @@ public interface Awaitable {
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
 	static boolean awaitMultiple(long timeoutMillis, Awaitable... operations)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, TimeUnit.MILLISECONDS, true, operations);
+		return awaitMultiple(timeoutMillis, MILLISECONDS, true, operations);
 	}
 
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
@@ -448,6 +446,6 @@ public interface Awaitable {
 	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
 	static boolean awaitMultiple(long timeoutMillis, Awaitable.WithUnit... operations)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, TimeUnit.MILLISECONDS, true, (Awaitable[]) operations);
+		return awaitMultiple(timeoutMillis, MILLISECONDS, true, (Awaitable[]) operations);
 	}
 }
