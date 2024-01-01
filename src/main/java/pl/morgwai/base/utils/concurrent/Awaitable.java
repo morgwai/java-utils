@@ -1,6 +1,7 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.utils.concurrent;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +51,10 @@ public interface Awaitable {
 
 		/** A version of {@link #await(long)} method with additional {@link TimeUnit} param. */
 		boolean await(long timeout, TimeUnit unit) throws InterruptedException;
+
+		default boolean await(Duration timeout) throws InterruptedException {
+			return await(timeout.toNanos(), TimeUnit.NANOSECONDS);
+		}
 
 		/** Calls {@link #await(long, TimeUnit) await(timeoutMillis, TimeUnit.MILLISECONDS)}. */
 		@Override
