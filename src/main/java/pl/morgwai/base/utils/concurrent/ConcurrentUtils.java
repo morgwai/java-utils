@@ -6,9 +6,7 @@ import java.util.function.*;
 
 
 
-/**
- * Various concurrent utility functions.
- */
+/** Various concurrent utility functions. */
 public interface ConcurrentUtils {
 
 
