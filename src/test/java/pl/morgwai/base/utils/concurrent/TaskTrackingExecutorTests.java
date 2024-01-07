@@ -1,18 +1,21 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.utils.concurrent;
 
+import java.util.Map;
 import java.util.concurrent.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import pl.morgwai.base.utils.SlowTests;
 
 import static java.util.concurrent.TimeUnit.*;
+import static java.util.logging.Level.FINEST;
+import static java.util.logging.Level.WARNING;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 import static org.junit.Assert.*;
+import static pl.morgwai.base.jul.JulConfigurator.*;
 import static pl.morgwai.base.utils.concurrent.CallableTaskExecution.callAsync;
 
 
@@ -407,21 +410,20 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
+	static final Logger log = Logger.getLogger(TaskTrackingExecutorTests.class.getName());
+
+
+
 	/**
-	 * Change the below value if you need logging:<br/>
 	 * {@code INFO} will log performance measurements from
 	 * {@link #testPerformance(int, long, double)}.
 	 */
-	static Level LOG_LEVEL = Level.WARNING;
-	static final Logger log = Logger.getLogger(TaskTrackingExecutorTests.class.getName());
-
 	@BeforeClass
 	public static void setupLogging() {
-		try {
-			LOG_LEVEL = Level.parse(System.getProperty(
-					TaskTrackingExecutorTests.class.getPackageName() + ".level"));
-		} catch (Exception ignored) {}
-		log.setLevel(LOG_LEVEL);
-		for (final var handler: Logger.getLogger("").getHandlers()) handler.setLevel(LOG_LEVEL);
+		addOrReplaceLoggingConfigProperties(Map.of(
+			LEVEL_SUFFIX, WARNING.toString(),
+			ConsoleHandler.class.getName() + LEVEL_SUFFIX, FINEST.toString()
+		));
+		overrideLogLevelsWithSystemProperties("pl.morgwai");
 	}
 }

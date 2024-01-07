@@ -13,7 +13,11 @@ import org.junit.experimental.categories.Category;
 import pl.morgwai.base.utils.SlowTests;
 import pl.morgwai.base.utils.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
 
+import static java.util.logging.Level.FINEST;
+import static java.util.logging.Level.WARNING;
+
 import static org.junit.Assert.*;
+import static pl.morgwai.base.jul.JulConfigurator.*;
 
 
 
@@ -428,18 +432,20 @@ public class OrderedConcurrentOutputBufferTests {
 
 
 
-	// change the below value if you need logging
-	// FINER will log adding/closing buckets and closing the output stream
-	// FINEST will additionally log every message written to the output stream
-	static final Level LOG_LEVEL = Level.OFF;
-
 	static final Logger log = Logger.getLogger(OrderedConcurrentOutputBufferTests.class.getName());
 
+
+
+	/**
+	 * {@code FINER} will log adding/closing buckets and closing the output stream,<br/>
+	 * {@code FINEST} will additionally log every message written to the output stream.
+	 */
 	@BeforeClass
 	public static void setupLogging() {
-		var handler = new ConsoleHandler();
-		handler.setLevel(LOG_LEVEL);
-		log.addHandler(handler);
-		log.setLevel(LOG_LEVEL);
+		addOrReplaceLoggingConfigProperties(Map.of(
+			LEVEL_SUFFIX, WARNING.toString(),
+			ConsoleHandler.class.getName() + LEVEL_SUFFIX, FINEST.toString()
+		));
+		overrideLogLevelsWithSystemProperties("pl.morgwai");
 	}
 }
