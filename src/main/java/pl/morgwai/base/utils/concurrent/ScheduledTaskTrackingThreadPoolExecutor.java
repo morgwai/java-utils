@@ -12,7 +12,7 @@ import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecuto
 /**
  * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTrackingExecutor}.
  * Decorates scheduled items with {@link ScheduledExecution}, so that the original tasks can be
- * obtained from the result of {@link #tryForceTerminate()}.
+ * obtained from the result of {@link #getRunningTasks()}.
  * <p>
  * <b>NOTE:</b> due to the design of
  * {@link ScheduledThreadPoolExecutor#decorateTask(Runnable, RunnableScheduledFuture) task
@@ -39,8 +39,8 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 
 	@Override
-	public ForcedTerminationAftermath tryForceTerminate() {
-		return taskTrackingDecorator.tryForceTerminate();
+	public List<Runnable> getRunningTasks() {
+		return taskTrackingDecorator.getRunningTasks();
 	}
 
 

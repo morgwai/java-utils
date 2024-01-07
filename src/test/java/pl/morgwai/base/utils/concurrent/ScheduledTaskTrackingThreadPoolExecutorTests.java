@@ -89,10 +89,11 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 		assertFalse("scheduledExecution should not complete",
 				scheduledExecution.isDone());
 
-		final var aftermath = testSubject.tryForceTerminate();
+		final var runningTasks = testSubject.getRunningTasks();
+		testSubject.shutdownNow();
 		assertEquals("1 task should be running in the aftermath",
-				1, aftermath.runningTasks.size());
-		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
+				1, runningTasks.size());
+		final var runningTask = unwrapIfScheduled(runningTasks.get(0));
 		assertSame("runningTask should be wrapping scheduledTask",
 				scheduledTask, runningTask);
 		try {
@@ -138,10 +139,11 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 		assertFalse("scheduledExecution should not complete",
 				scheduledExecution.isDone());
 
-		final var aftermath = testSubject.tryForceTerminate();
+		final var runningTasks = testSubject.getRunningTasks();
+		testSubject.shutdownNow();
 		assertEquals("1 task should be running in the aftermath",
-				1, aftermath.runningTasks.size());
-		final var runningTask = unwrapIfScheduled(aftermath.runningTasks.get(0));
+				1, runningTasks.size());
+		final var runningTask = unwrapIfScheduled(runningTasks.get(0));
 		assertSame("runningTask should be wrapping scheduledTask",
 				scheduledTask, runningTask);
 		assertSame("scheduledExecution should return the same result as scheduledTask",

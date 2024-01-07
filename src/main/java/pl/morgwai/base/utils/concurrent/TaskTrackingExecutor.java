@@ -10,8 +10,10 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 
 
 /**
- * An {@link ExecutorService} that allows to obtain a list of tasks that were still running when
- * an {@link #tryForceTerminate() attempt to force terminate} was made.
+ * {@link ExecutorService} that allows to obtain a {@link #getRunningTasks() List of currently
+ * running tasks}.
+ * Useful for monitoring and debugging which tasks got stuck and prevented clean
+ * {@link ExecutorService#awaitTermination(long, TimeUnit) termination}.
  * @see TaskTrackingThreadPoolExecutor
  * @see ScheduledTaskTrackingThreadPoolExecutor
  */
@@ -20,32 +22,13 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 	/**
-	 * Calls {@link #shutdownNow()} and returns an object containing a {@code List} of tasks, that
-	 * were still running right before the call.
-	 * The returned object also contains the {@code List} of tasks returned by
-	 * {@link #shutdownNow()} itself.
+	 * Returns a {@code List} of tasks currently being run by the worker {@code Threads}.
+	 * Unless stated otherwise by an implementing class, this may be a subject to all kind of races
+	 * and thus may sometimes not even be fully consistent with any point in the past. This method
+	 * is intended for spotting long-running or stuck tasks or for general overview of types
+	 * of tasks being executed.
 	 */
-	ForcedTerminationAftermath tryForceTerminate();
-
-
-
-	/** Returned by {@link #tryForceTerminate()}. */
-	class ForcedTerminationAftermath {
-
-		/** List of tasks that were still running when {@link #tryForceTerminate()} was called. */
-		public List<Runnable> getRunningTasks() { return runningTasks; }
-		public final List<Runnable> runningTasks;
-
-		/** List of tasks returned by {@link #shutdownNow()}. */
-		public List<Runnable> getUnexecutedTasks() { return unexecutedTasks; }
-		public final List<Runnable> unexecutedTasks;
-
-		public ForcedTerminationAftermath(
-				List<Runnable> runningTasks, List<Runnable> unexecutedTasks) {
-			this.runningTasks = runningTasks;
-			this.unexecutedTasks = unexecutedTasks;
-		}
-	}
+	List<Runnable> getRunningTasks();
 
 
 
@@ -191,14 +174,11 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		@Override
-		public ForcedTerminationAftermath tryForceTerminate() {
-			return new ForcedTerminationAftermath(
-				runningTasks.stream()
-					.map((holder) -> holder.task)
-					.filter(Objects::nonNull)
-					.collect(toUnmodifiableList()),
-				shutdownNow()
-			);
+		public List<Runnable> getRunningTasks() {
+			return runningTasks.stream()
+				.map((holder) -> holder.task)
+				.filter(Objects::nonNull)
+				.collect(toUnmodifiableList());
 		}
 
 
@@ -238,10 +218,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/**
-		 * A decorator that automatically calls {@link #storeTaskIntoHolderBeforeExecute(Runnable)}
-		 * and {@link #clearTaskHolderAfterExecute()}.
-		 */
+		/** A decorator that tracks execution of its wrapped task. */
 		public class TrackableTask implements Runnable {
 
 			public Runnable getWrappedTask() { return wrappedTask; }
