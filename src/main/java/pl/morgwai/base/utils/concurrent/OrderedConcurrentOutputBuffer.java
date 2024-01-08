@@ -89,7 +89,7 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 	 * @return bucket placed right after the one returned by the previous call to this method (or
 	 *     the first one if this is the first call). All methods of the returned bucket are
 	 *     thread-safe.
-	 * @throws IllegalStateException if {@link #signalNoMoreBuckets()} have been already called.
+	 * @throws IllegalStateException if {@link #signalNoMoreBuckets()} has already been called.
 	 */
 	public OutputStream<MessageT> addBucket() {
 		// The below synchronization does not guarantee thread-safety: if 2 threads that call
@@ -112,10 +112,10 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 	/**
-	 * Indicates that no more new buckets will be {@link #addBucket() added}. Usually called upon
-	 * the end of the input stream being processed. After a call to this method the underlying
-	 * output stream will be closed automatically, when all existing buckets get
-	 * {@link OutputStream#close() closed}.
+	 * A call to this method indicates that no more new buckets will be {@link #addBucket() added}.
+	 * This is usually done upon the end of the input stream being processed. As a result, when
+	 * all the existing buckets are {@link OutputStream#close() closed}, the underlying output
+	 * stream will be closed automatically.
 	 * <p>
 	 * This method may be may be called concurrently with any existing bucket methods without an
 	 * additional synchronization. However invocations concurrent with {@link #addBucket()} must be
@@ -177,14 +177,16 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 		/**
-		 * Marks this bucket as {@link #closed}. If this is the head bucket (the first unclosed
-		 * one), then {@link #flush() flushes} recursively all the subsequent closed buckets and the
-		 * first unclosed one as well. The first unclosed bucket becomes the new head and its
-		 * messages will be {@link OutputStream#write(Object) written} directly to
-		 * {@link #output the underlying output stream} from now on.
+		 * Marks this bucket as {@link #closed}. If this bucket is the head bucket (the first
+		 * unclosed one), then all the subsequent closed buckets and the first unclosed one are
+		 * {@link #flush() flushed}.
 		 * <p>
-		 * If all the buckets are closed && flushed and {@link #signalNoMoreBuckets()} has already
-		 * been called, then {@link #output the underlying output stream} will be
+		 * The first unclosed bucket becomes the new head and its messages will be
+		 * {@link OutputStream#write(Object) written} directly to
+		 * {@link #output the underlying output stream} from now on.</p>
+		 * <p>
+		 * If all the buckets are closed (and flushed) and {@link #signalNoMoreBuckets()} has
+		 * already been called, then {@link #output the underlying output stream} will be
 		 * {@link OutputStream#close() closed}.</p>
 		 */
 		@Override
@@ -201,11 +203,13 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 		/**
 		 * {@link OutputStream#write(Object) Writes} all messages in this bucket to
-		 * {@link #output the underlying output stream} and if it is already {@link #closed}, then
-		 * recursively flushes {@link #next the next one}.<br/>
-		 * If there is no next one (meaning this is {@link #tailGuard}) and
+		 * {@link #output the underlying output stream}. If this bucket is already
+		 * {@link #closed}, then recursively flushes {@link #next the next bucket}.
+		 * <p>
+		 * If there is no next bucket (meaning this is {@link #tailGuard}) and
 		 * {@link #signalNoMoreBuckets()} has already been called, then
 		 * {@link #output the underlying output stream} will be {@link OutputStream#close() closed}.
+		 * </p>
 		 * <p>
 		 * Flushing of each bucket is synchronized only on its own {@link #lock}, so any operations
 		 * on subsequent buckets performed by other threads are not delayed.</p>
