@@ -25,7 +25,7 @@ public class CallableTaskExecutionTests {
 		final var result = "result";
 		final var execution = callAsync(() -> result);
 		assertSame("result of execution should be the same as returned by the task",
-			result, execution.get(50L, MILLISECONDS));
+				result, execution.get(50L, MILLISECONDS));
 	}
 
 
