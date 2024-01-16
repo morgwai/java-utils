@@ -45,6 +45,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 			handler
 		);
 		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
+		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
 	}
 
 
@@ -177,6 +178,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 	) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
 		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
+		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
 	}
 
 
@@ -195,6 +197,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 	) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
 		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
+		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
 	}
 
 
@@ -214,5 +217,6 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 	) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, handler);
 		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
+		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
 	}
 }

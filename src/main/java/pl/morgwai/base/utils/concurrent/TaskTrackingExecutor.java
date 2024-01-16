@@ -51,8 +51,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 	/**
-	 * A decorator for an {@link ExecutorService} that makes its target a
-	 * {@link TaskTrackingExecutor}.
+	 * Decorator for an {@link ExecutorService} that makes it a {@link TaskTrackingExecutor}.
 	 * @see TaskTrackingThreadPoolExecutor
 	 * @see ScheduledTaskTrackingThreadPoolExecutor
 	 */
@@ -70,6 +69,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executorToDecorate}.
+		 * {@code executorToDecorate} must be idle at the time of decoration.
+		 * Afterwards {@code executorToDecorate} must be used only via the constructed decorator.
 		 * @param threadPoolSize used as a concurrency-level hint.
 		 */
 		public TaskTrackingExecutorDecorator(ExecutorService executorToDecorate, int threadPoolSize)
@@ -79,7 +80,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/** Decorates {@code executorToDecorate}. */
+		/** See {@link #TaskTrackingExecutorDecorator(ExecutorService, int)}. */
 		public TaskTrackingExecutorDecorator(ExecutorService executorToDecorate) {
 			this(executorToDecorate, -1);
 		}
@@ -87,13 +88,27 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		/**
-		 * Decorates {@code executorToDecorate} and calls
-		 * {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)
-		 * decorateRejectedExecutionHandler(executorToDecorate)}.
+		 * Decorates {@code executorToDecorate}.
+		 * Calls {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)
+		 * decorateRejectedExecutionHandler(executorToDecorate)} and
+		 * {@link #decorateThreadFactory(ThreadFactory)
+		 * executorToDecorate.setThreadFactory(
+		 * decorateThreadFactory(executorToDecorate.getThreadFactory()))} in the process.
+		 * Afterwards {@code executorToDecorate} must be used only via the constructed decorator.
+		 * @throws IllegalStateException if {@code executorToDecorate} is not idle.
 		 */
 		public TaskTrackingExecutorDecorator(ThreadPoolExecutor executorToDecorate) {
 			this(executorToDecorate, false, executorToDecorate.getCorePoolSize());
+			if (executorToDecorate.getActiveCount() > 0) {
+				throw new IllegalStateException(
+						"executor must be idle to decorate it with TaskTrackingExecutorDecorator");
+			}
 			decorateRejectedExecutionHandler(executorToDecorate);
+			executorToDecorate.setThreadFactory(
+					decorateThreadFactory(executorToDecorate.getThreadFactory()));
+			final int corePoolSize = executorToDecorate.getCorePoolSize();
+			executorToDecorate.setCorePoolSize(0);
+			executorToDecorate.setCorePoolSize(corePoolSize);
 		}
 
 
@@ -114,6 +129,23 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
+		/**
+		 * Decorates {@code factoryToDecorate} to create worker {@link Thread}s, that remove their
+		 * monitoring hooks from this {@code TaskTrackingExecutorDecorator} after they exit.
+		 */
+		public ThreadFactory decorateThreadFactory(ThreadFactory factoryToDecorate) {
+			return (task) -> factoryToDecorate.newThread(() -> {
+				try {
+					task.run();
+				} finally {
+					final var taskHolder = threadLocalTaskHolder.get();
+					if (taskHolder != null) runningTasks.remove(taskHolder);
+				}
+			});
+		}
+
+
+
 		/** Hooking capabilities allow to avoid wrapping tasks with {@link TrackableTask}. */
 		public interface HookableExecutor extends ExecutorService {
 			void addBeforeExecuteHook(BiConsumer<Thread, Runnable> hook);
@@ -122,16 +154,14 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/**
-		 * Decorates {@code executorToDecorate}.
-		 * @param threadPoolSize used as a concurrency-level hint.
-		 */
+		/** See {@link #TaskTrackingExecutorDecorator(ExecutorService, int)}. */
 		public TaskTrackingExecutorDecorator(
 			HookableExecutor executorToDecorate,
 			int threadPoolSize
 		) {
 			this(executorToDecorate, true, threadPoolSize);
-			executorToDecorate.addBeforeExecuteHook(this::storeTaskIntoHolderBeforeExecute);
+			executorToDecorate.addBeforeExecuteHook(
+					(worker, task) -> storeTaskIntoHolderBeforeExecute(task));
 			executorToDecorate.addAfterExecuteHook((task, error) -> clearTaskHolderAfterExecute());
 		}
 
@@ -186,24 +216,12 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/**
-		 * As {@link Thread#currentThread()} is expensive on some JVMs, {@code worker} may be
-		 * {@code null} if the caller does not have it at hand already and this method will call
-		 * {@link Thread#currentThread()} only if needed. See {@link TrackableTask#run()} as an
-		 * example.
-		 */
-		void storeTaskIntoHolderBeforeExecute(Thread worker, Runnable task) {
+		void storeTaskIntoHolderBeforeExecute(Runnable task) {
 			var taskHolder = threadLocalTaskHolder.get();
 			if (taskHolder == null) {
 				taskHolder = new TaskHolder();
 				threadLocalTaskHolder.set(taskHolder);
 				runningTasks.add(taskHolder);
-				if (worker == null) worker = Thread.currentThread();
-				final var originalHandler = worker.getUncaughtExceptionHandler();
-				worker.setUncaughtExceptionHandler((thread, error) -> {
-					runningTasks.remove(threadLocalTaskHolder.get());
-					originalHandler.uncaughtException(thread, error);
-				});
 			}
 			taskHolder.task = task;
 		}
@@ -240,7 +258,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			}
 
 			@Override public void run() {
-				storeTaskIntoHolderBeforeExecute(null, wrappedTask);
+				storeTaskIntoHolderBeforeExecute(wrappedTask);
 				try {
 					wrappedTask.run();
 				} finally {

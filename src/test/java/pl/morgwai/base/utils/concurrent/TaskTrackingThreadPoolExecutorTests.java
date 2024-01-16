@@ -7,11 +7,15 @@ import java.util.concurrent.*;
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
 		.TaskHolder;
 
-import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 
 
 public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExecutorTests {
+
+
+
+	TaskTrackingThreadPoolExecutor executor;
 
 
 
@@ -21,8 +25,13 @@ public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExe
 		int queueSize,
 		ThreadFactory threadFactory
 	) {
-		final var executor = new TaskTrackingThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
-				DAYS, new LinkedBlockingQueue<>(queueSize), threadFactory, rejectionHandler);
+		executor = new TaskTrackingThreadPoolExecutor(
+			threadPoolSize, threadPoolSize,
+			0L, MILLISECONDS,
+			new LinkedBlockingQueue<>(queueSize),
+			threadFactory,
+			rejectionHandler
+		);
 		expectedRejectingExecutor = executor;
 		return executor;
 	}
@@ -30,7 +39,28 @@ public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExe
 
 
 	@Override
+	protected ThreadFactory getThreadFactory() {
+		return executor.getThreadFactory();
+	}
+
+
+
+	@Override
+	protected void setThreadFactory(ThreadFactory threadFactory) {
+		executor.setThreadFactory(threadFactory);
+	}
+
+
+
+	@Override
 	protected Set<TaskHolder> getRunningTaskHolders() {
-		return ((TaskTrackingThreadPoolExecutor) testSubject).taskTrackingDecorator.runningTasks;
+		return executor.taskTrackingDecorator.runningTasks;
+	}
+
+
+
+	@Override
+	protected void setMaxPoolSize(int maxPoolSize) {
+		executor.setMaximumPoolSize(maxPoolSize);
 	}
 }

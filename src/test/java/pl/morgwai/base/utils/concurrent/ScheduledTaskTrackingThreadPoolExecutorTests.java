@@ -39,10 +39,15 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
-	protected Object unwrapIfScheduled(Runnable wrappedScheduledTask) {
-		assertTrue("wrappedScheduledTask should be a ScheduledExecution",
-				wrappedScheduledTask instanceof ScheduledExecution);
-		return ((ScheduledExecution<?>) wrappedScheduledTask).getTask();
+	protected ThreadFactory getThreadFactory() {
+		return scheduler.getThreadFactory();
+	}
+
+
+
+	@Override
+	protected void setThreadFactory(ThreadFactory threadFactory) {
+		scheduler.setThreadFactory(threadFactory);
 	}
 
 
@@ -55,6 +60,15 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
+	protected Object unwrapIfScheduled(Runnable wrappedScheduledTask) {
+		assertTrue("wrappedScheduledTask should be a ScheduledExecution",
+				wrappedScheduledTask instanceof ScheduledExecution);
+		return ((ScheduledExecution<?>) wrappedScheduledTask).getTask();
+	}
+
+
+
+	@Override
 	public void testExecutionRejection() {
 		// ScheduledExecutor's queue grows until out of memory
 	}
@@ -62,9 +76,19 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
-	protected void awaitWorkerDeath() {
-		// task Throwables do not kill workers of ScheduledExecutors
+	protected boolean uncaughtKillsWorker() {
+		return false;
 	}
+
+
+
+	@Override
+	protected void setMaxPoolSize(int maxPoolSize) {
+		// ScheduledExecutor's pool size is fixed
+	}
+
+	@Override
+	public void testLaidOffWorkersDoNotLeakTaskHolders() {}
 
 
 

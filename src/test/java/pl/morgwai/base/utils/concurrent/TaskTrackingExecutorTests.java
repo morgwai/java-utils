@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.logging.*;
 
 import org.junit.*;
@@ -34,15 +35,29 @@ public abstract class TaskTrackingExecutorTests {
 
 	@Before
 	public void setup() {
-		testSubject = createTestSubjectAndFinishSetup(THREADPOOL_SIZE, 1, testThreadFactory);
+		testSubject = createTestSubjectAndFinishSetup(
+			THREADPOOL_SIZE,
+			1,
+			(task) -> new Thread(workerDecorator.apply(task))
+		);
 	}
 
 	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
 			int threadPoolSize, int queueSize, ThreadFactory threadFactory);
 
 	protected abstract void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook);
+	protected abstract ThreadFactory getThreadFactory();
+	protected abstract void setThreadFactory(ThreadFactory threadFactory);
+	protected abstract Set<TaskHolder> getRunningTaskHolders();
+	protected abstract void setMaxPoolSize(int maxPoolSize);
+
+	Function<Runnable, Runnable> workerDecorator = Function.identity();
 
 
+	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
+	protected boolean uncaughtKillsWorker() {
+		return true;
+	}
 
 	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
 	protected Object unwrapIfScheduled(Runnable task) {
@@ -338,27 +353,18 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
-	final CountDownLatch workerDied = new CountDownLatch(1);
-
-	final ThreadFactory testThreadFactory = (task) -> {
-		final var thread = new Thread(task);
-		thread.setUncaughtExceptionHandler((t, e) -> {
-			log.log(FINE, "uncaught exception in " + t, e);
-			workerDied.countDown();
-		});
-		return thread;
-	};
-
-	protected abstract Set<TaskHolder> getRunningTaskHolders();
-
-	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
-	protected void awaitWorkerDeath() throws InterruptedException {
-		assertTrue("worker should die",
-			workerDied.await(50L, MILLISECONDS));
-	}
-
 	@Test
 	public void testDyingWorkersDoNotLeakTaskHolders() throws InterruptedException {
+		final var workerDied = new CountDownLatch(1);
+		final var originalFactory = getThreadFactory();
+		setThreadFactory((task) -> {
+			final var worker = originalFactory.newThread(task);
+			worker.setUncaughtExceptionHandler((t, e) -> {
+				log.log(FINE, "uncaught exception in " + t, e);
+				workerDied.countDown();
+			});
+			return worker;
+		});
 		final var allTasksStarted = new CountDownLatch(THREADPOOL_SIZE - 1);
 		createAndDispatchBlockingTasks(THREADPOOL_SIZE - 1, allTasksStarted);
 		assertTrue("all tasks should start",
@@ -369,17 +375,50 @@ public abstract class TaskTrackingExecutorTests {
 		testSubject.execute(() -> {
 			throw new AssertionError("killing worker");
 		});
-		awaitWorkerDeath();
+		if (uncaughtKillsWorker()) {
+			assertTrue("worker should die",
+					workerDied.await(100L, MILLISECONDS));
+		}
 
-		final var lastTaskStarted = new CountDownLatch(1);
-		CallableTaskExecution.callAsync(newBlockingTask("lastTask", lastTaskStarted), testSubject);
-		assertTrue("lastTask should start",
-				lastTaskStarted.await(50L, MILLISECONDS));
 		assertEquals("sanity check",
-				THREADPOOL_SIZE, testSubject.getRunningTasks().size());
+				THREADPOOL_SIZE - 1, testSubject.getRunningTasks().size());
 		assertEquals("dead worker should have removed its taskHolder right before dying",
-				THREADPOOL_SIZE, getRunningTaskHolders().size());
+				THREADPOOL_SIZE - 1, getRunningTaskHolders().size());
 		taskBlockingLatch.countDown();
+	}
+
+
+
+	@Test
+	public void testLaidOffWorkersDoNotLeakTaskHolders() throws InterruptedException {
+		final var extraWorkersLaidOff = new CountDownLatch(THREADPOOL_SIZE);
+		workerDecorator = (workerClosure) -> () -> {
+			try {
+				workerClosure.run();
+			} finally {
+				extraWorkersLaidOff.countDown();
+			}
+		};
+		final int MAX_POOL_SIZE = THREADPOOL_SIZE * 2;
+		setMaxPoolSize(MAX_POOL_SIZE);
+		final var allTasksCompleted = new CountDownLatch(MAX_POOL_SIZE + 1);
+		addAfterExecuteHook((task, error) -> allTasksCompleted.countDown());
+		final var allWorkersStarted = new CountDownLatch(MAX_POOL_SIZE);
+		createAndDispatchBlockingTasks(MAX_POOL_SIZE + 1, allWorkersStarted);
+		assertTrue("all workers should start",
+				allWorkersStarted.await(100L, MILLISECONDS));
+		assertEquals("sanity check",
+				MAX_POOL_SIZE, getRunningTaskHolders().size());
+
+		taskBlockingLatch.countDown();
+		assertTrue("all tasks should complete",
+				allTasksCompleted.await(100L, MILLISECONDS));
+		assertTrue("extra workers should be laid off",
+				extraWorkersLaidOff.await(100L, MILLISECONDS));
+		assertTrue("sanity check",
+				testSubject.getRunningTasks().isEmpty());
+		assertEquals("laid Off workers should remove their taskHolders",
+				THREADPOOL_SIZE, getRunningTaskHolders().size());
 	}
 
 
@@ -413,7 +452,10 @@ public abstract class TaskTrackingExecutorTests {
 		// create executors
 		final var threadPoolSize = Runtime.getRuntime().availableProcessors();
 		final var threadPoolExecutor = new ThreadPoolExecutor(
-				threadPoolSize, threadPoolSize, 0L, DAYS, new LinkedBlockingQueue<>(numberOfTasks));
+			threadPoolSize, threadPoolSize,
+			0L, DAYS,
+			new LinkedBlockingQueue<>(numberOfTasks)
+		);
 		testSubject.shutdown();
 		testSubject = createTestSubjectAndFinishSetup(
 			threadPoolSize,

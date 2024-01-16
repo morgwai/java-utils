@@ -9,7 +9,7 @@ import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecuto
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
 		.TaskHolder;
 
-import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 
 
@@ -30,7 +30,7 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 	) {
 		backingExecutor = new ThreadPoolExecutor(
 			threadPoolSize, threadPoolSize,
-			0L, DAYS,
+			0L, MILLISECONDS,
 			new LinkedBlockingQueue<>(queueSize),
 			threadFactory,
 			rejectionHandler
@@ -53,7 +53,28 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 
 
 	@Override
+	protected ThreadFactory getThreadFactory() {
+		return backingExecutor.getThreadFactory();
+	}
+
+
+
+	@Override
+	protected void setThreadFactory(ThreadFactory threadFactory) {
+		backingExecutor.setThreadFactory(threadFactory);
+	}
+
+
+
+	@Override
 	protected Set<TaskHolder> getRunningTaskHolders() {
 		return ((TaskTrackingExecutorDecorator) testSubject).runningTasks;
+	}
+
+
+
+	@Override
+	protected void setMaxPoolSize(int maxPoolSize) {
+		backingExecutor.setMaximumPoolSize(maxPoolSize);
 	}
 }
