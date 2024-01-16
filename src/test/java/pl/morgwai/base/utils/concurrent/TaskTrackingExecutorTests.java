@@ -53,14 +53,20 @@ public abstract class TaskTrackingExecutorTests {
 
 	protected CountDownLatch taskBlockingLatch = new CountDownLatch(1);
 
-	class BlockingTask implements Callable<String> {
+	static class BlockingTask implements Callable<String> {
 
 		final String taskId;
 		final CountDownLatch taskStartedLatch;
+		final CountDownLatch taskBlockingLatch;
 
-		BlockingTask(String taskId, CountDownLatch taskStartedLatch) {
+		BlockingTask(
+			String taskId,
+			CountDownLatch taskStartedLatch,
+			CountDownLatch taskBlockingLatch
+		) {
 			this.taskId = taskId;
 			this.taskStartedLatch = taskStartedLatch;
+			this.taskBlockingLatch = taskBlockingLatch;
 		}
 
 		@Override public String call() throws InterruptedException {
@@ -74,18 +80,38 @@ public abstract class TaskTrackingExecutorTests {
 		}
 	}
 
-
+	BlockingTask newBlockingTask(String taskId, CountDownLatch taskStartedLatch) {
+		return new BlockingTask(
+			taskId,
+			taskStartedLatch,
+			TaskTrackingExecutorTests.this.taskBlockingLatch
+		);
+	}
 
 	CallableTaskExecution<String>[] createAndDispatchBlockingTasks(
 		int numberOfTasks,
 		CountDownLatch tasksStartedLatch
 	) {
+		return createAndDispatchBlockingTasks(
+			numberOfTasks,
+			tasksStartedLatch,
+			taskBlockingLatch,
+			testSubject
+		);
+	}
+
+	static CallableTaskExecution<String>[] createAndDispatchBlockingTasks(
+		int numberOfTasks,
+		CountDownLatch tasksStartedLatch,
+		CountDownLatch taskBlockingLatch,
+		Executor executor
+	) {
 		@SuppressWarnings("unchecked")
 		final CallableTaskExecution<String>[] tasks = new CallableTaskExecution[numberOfTasks];
 		for (int taskNumber = 0; taskNumber < numberOfTasks; taskNumber++) {
 			tasks[taskNumber] = CallableTaskExecution.callAsync(
-				new BlockingTask(String.valueOf(taskNumber), tasksStartedLatch),
-				testSubject
+				new BlockingTask(String.valueOf(taskNumber), tasksStartedLatch, taskBlockingLatch),
+				executor
 			);
 		}
 		return tasks;
@@ -132,7 +158,7 @@ public abstract class TaskTrackingExecutorTests {
 	public void testStuckCallable() throws InterruptedException {
 		final var blockingTaskStarted = new CountDownLatch(1);
 		final var blockingTaskExecution = new CallableTaskExecution<>(
-				new BlockingTask("blockingTask", blockingTaskStarted));
+				newBlockingTask("blockingTask", blockingTaskStarted));
 		testSubject.execute(blockingTaskExecution);
 		assertTrue("blockingTaskExecution should start",
 				blockingTaskStarted.await(50L, MILLISECONDS));
@@ -346,7 +372,7 @@ public abstract class TaskTrackingExecutorTests {
 		awaitWorkerDeath();
 
 		final var lastTaskStarted = new CountDownLatch(1);
-		CallableTaskExecution.callAsync(new BlockingTask("lastTask", lastTaskStarted), testSubject);
+		CallableTaskExecution.callAsync(newBlockingTask("lastTask", lastTaskStarted), testSubject);
 		assertTrue("lastTask should start",
 				lastTaskStarted.await(50L, MILLISECONDS));
 		assertEquals("sanity check",
@@ -384,21 +410,35 @@ public abstract class TaskTrackingExecutorTests {
 		long taskDurationMillis,
 		double expectedPerformanceFactor
 	) throws InterruptedException {
+		// create executors
 		final var threadPoolSize = Runtime.getRuntime().availableProcessors();
 		final var threadPoolExecutor = new ThreadPoolExecutor(
 				threadPoolSize, threadPoolSize, 0L, DAYS, new LinkedBlockingQueue<>(numberOfTasks));
 		testSubject.shutdown();
 		testSubject = createTestSubjectAndFinishSetup(
-				threadPoolSize, numberOfTasks, Executors.defaultThreadFactory());
-		final Runnable warmupTask = () -> {
-			try {
-				taskBlockingLatch.await();
-			} catch (InterruptedException ignored) {}
-		};
-		for (int i = 0; i < threadPoolSize; i++) {
-			testSubject.execute(warmupTask);
-			threadPoolExecutor.execute(warmupTask);
-		}
+			threadPoolSize,
+			numberOfTasks,
+			Executors.defaultThreadFactory()
+		);
+
+		// warmup threadPoolExecutor
+		final var threadPoolExecutorTaskBlockingLatch = new CountDownLatch(1);
+		final var allThreadPoolExecutorWarmupTasksStarted = new CountDownLatch(threadPoolSize);
+		createAndDispatchBlockingTasks(
+			threadPoolSize,
+			allThreadPoolExecutorWarmupTasksStarted,
+			threadPoolExecutorTaskBlockingLatch,
+			threadPoolExecutor
+		);
+		assertTrue("all warmup tasks should start",
+				allThreadPoolExecutorWarmupTasksStarted.await(50L, MILLISECONDS));
+		threadPoolExecutorTaskBlockingLatch.countDown();
+
+		// warmup testSubject
+		final var allWarmupTasksStarted = new CountDownLatch(threadPoolSize);
+		createAndDispatchBlockingTasks(threadPoolSize, allWarmupTasksStarted);
+		assertTrue("all warmup tasks should start",
+				allWarmupTasksStarted.await(50L, MILLISECONDS));
 		taskBlockingLatch.countDown();
 
 		final var threadPoolExecutorDuration =
@@ -406,6 +446,7 @@ public abstract class TaskTrackingExecutorTests {
 		final var testSubjectDuration =
 				measurePerformance(testSubject, numberOfTasks, taskDurationMillis);
 		final var performanceFactor = ((double) testSubjectDuration) / threadPoolExecutorDuration;
+
 		if (log.isLoggable(Level.INFO)) log.info(String.format(
 			"%dk of %dms-tasks on %s resulted with %.3fx performanceFactor",
 			numberOfTasks / 1000,
