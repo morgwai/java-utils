@@ -3,6 +3,7 @@ package pl.morgwai.base.utils.concurrent;
 
 import java.util.Comparator;
 import java.util.LinkedList;
+import java.util.function.BiConsumer;
 
 import com.google.common.collect.Comparators;
 import org.junit.Test;
@@ -17,6 +18,13 @@ import static org.junit.Assert.assertTrue;
 
 
 public abstract class TaskTrackingHookableExecutorTests extends TaskTrackingExecutorTests {
+
+
+
+	@Override
+	protected void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook) {
+		((HookableExecutor) testSubject).addAfterExecuteHook(hook);
+	}
 
 
 

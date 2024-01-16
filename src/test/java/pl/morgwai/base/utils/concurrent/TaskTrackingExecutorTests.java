@@ -4,6 +4,7 @@ package pl.morgwai.base.utils.concurrent;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.function.BiConsumer;
 import java.util.logging.*;
 
 import org.junit.*;
@@ -38,6 +39,8 @@ public abstract class TaskTrackingExecutorTests {
 
 	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
 			int threadPoolSize, int queueSize, ThreadFactory threadFactory);
+
+	protected abstract void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook);
 
 
 
@@ -292,15 +295,19 @@ public abstract class TaskTrackingExecutorTests {
 
 	@Test
 	public void testIdleWorkersDoNotAddNullsToRunningTasks() throws InterruptedException {
-		for (int i = 0; i < THREADPOOL_SIZE / 2; i++) testSubject.execute(() -> {});
+		final int NUMBER_OF_TASKS = THREADPOOL_SIZE / 2;
+		final var allTasksStarted = new CountDownLatch(NUMBER_OF_TASKS);
+		final var allWorkersIdle = new CountDownLatch(NUMBER_OF_TASKS);
+		addAfterExecuteHook((task, error) -> allWorkersIdle.countDown());
+		createAndDispatchBlockingTasks(NUMBER_OF_TASKS, allTasksStarted);
+		assertTrue("all tasks should start",
+				allTasksStarted.await(50L, MILLISECONDS));
+		taskBlockingLatch.countDown();
+		assertTrue("all workers should become idle",
+				allWorkersIdle.await(50L, MILLISECONDS));
 
-		final var runningTasks = testSubject.getRunningTasks();
 		assertTrue("there should be no running tasks",
-				runningTasks.isEmpty());
-
-		testSubject.shutdown();
-		assertTrue("executor should terminate",
-				testSubject.awaitTermination(20L, MILLISECONDS));
+				testSubject.getRunningTasks().isEmpty());
 	}
 
 
@@ -446,14 +453,16 @@ public abstract class TaskTrackingExecutorTests {
 
 
 	@After
-	public void tryTerminate() {
+	public void tryTerminate() throws InterruptedException {
 		testSubject.shutdown();
 		taskBlockingLatch.countDown();
 		try {
 			testSubject.awaitTermination(50L, MILLISECONDS);
-		} catch (InterruptedException ignored) {
 		} finally {
-			if ( !testSubject.isTerminated()) testSubject.shutdownNow();
+			if ( !testSubject.isTerminated()) {
+				testSubject.shutdownNow();
+				fail("executor should terminate cleanly");
+			}
 		}
 	}
 

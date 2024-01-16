@@ -1,8 +1,9 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.utils.concurrent;
 
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BiConsumer;
 
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator;
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
@@ -16,16 +17,37 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 
 
 
+	final List<BiConsumer<Runnable, Throwable>> afterExecuteHooks = new LinkedList<>();
+	ThreadPoolExecutor backingExecutor;
+
+
+
 	@Override
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
 		int threadPoolSize,
 		int queueSize,
 		ThreadFactory threadFactory
 	) {
-		final var backingExecutor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 0L,
-				DAYS, new LinkedBlockingQueue<>(queueSize), threadFactory, rejectionHandler);
+		backingExecutor = new ThreadPoolExecutor(
+			threadPoolSize, threadPoolSize,
+			0L, DAYS,
+			new LinkedBlockingQueue<>(queueSize),
+			threadFactory,
+			rejectionHandler
+		) {
+			@Override protected void afterExecute(Runnable task, Throwable error) {
+				afterExecuteHooks.forEach((hook) -> hook.accept(task, error));
+			}
+		};
 		expectedRejectingExecutor = backingExecutor;
 		return new TaskTrackingExecutorDecorator(backingExecutor);
+	}
+
+
+
+	@Override
+	protected void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook) {
+		afterExecuteHooks.add(hook);
 	}
 
 
