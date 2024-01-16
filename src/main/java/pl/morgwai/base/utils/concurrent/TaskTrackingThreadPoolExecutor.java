@@ -82,7 +82,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 	}
 
 	/**
-	 * Executes all {@link #addAfterExecuteHook(BiConsumer)}  added hooks} in the order they were
+	 * Executes all {@link #addAfterExecuteHook(BiConsumer)} added hooks} in the order they were
 	 * added.
 	 */
 	@Override

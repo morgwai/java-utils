@@ -71,7 +71,7 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	}
 
 	/**
-	 * Executes all {@link #addAfterExecuteHook(BiConsumer)}  added hooks} in the order they were
+	 * Executes all {@link #addAfterExecuteHook(BiConsumer)} added hooks} in the order they were
 	 * added.
 	 */
 	@Override
@@ -84,7 +84,9 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	/** Decorates {@code task} using {@link ScheduledExecution}. */
 	@Override
 	protected <V> ScheduledExecution<V> decorateTask(
-			Runnable task, RunnableScheduledFuture<V> scheduledExecution) {
+		Runnable task,
+		RunnableScheduledFuture<V> scheduledExecution
+	) {
 		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
@@ -93,7 +95,9 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 	/** Decorates {@code task} using {@link ScheduledExecution}. */
 	@Override
 	protected <V> ScheduledExecution<V> decorateTask(
-			Callable<V> task, RunnableScheduledFuture<V> scheduledExecution) {
+		Callable<V> task,
+		RunnableScheduledFuture<V> scheduledExecution
+	) {
 		return new ScheduledExecution<>(task, scheduledExecution);
 	}
 
@@ -165,7 +169,9 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 
 	public ScheduledTaskTrackingThreadPoolExecutor(
-			int corePoolSize, RejectedExecutionHandler handler) {
+		int corePoolSize,
+		RejectedExecutionHandler handler
+	) {
 		super(corePoolSize, handler);
 		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
 	}
@@ -173,7 +179,10 @@ public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPool
 
 
 	public ScheduledTaskTrackingThreadPoolExecutor(
-			int corePoolSize, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+		int corePoolSize,
+		ThreadFactory threadFactory,
+		RejectedExecutionHandler handler
+	) {
 		super(corePoolSize, threadFactory, handler);
 		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
 	}
