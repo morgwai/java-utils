@@ -131,8 +131,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			int threadPoolSize
 		) {
 			this(executorToDecorate, true, threadPoolSize);
-			executorToDecorate.addBeforeExecuteHook(
-					(thread, task) -> storeTaskIntoHolderBeforeExecute(task));
+			executorToDecorate.addBeforeExecuteHook(this::storeTaskIntoHolderBeforeExecute);
 			executorToDecorate.addAfterExecuteHook((task, error) -> clearTaskHolderAfterExecute());
 		}
 
@@ -187,12 +186,24 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		void storeTaskIntoHolderBeforeExecute(Runnable task) {
+		/**
+		 * As {@link Thread#currentThread()} is expensive on some JVMs, {@code worker} may be
+		 * {@code null} if the caller does not have it at hand already and this method will call
+		 * {@link Thread#currentThread()} only if needed. See {@link TrackableTask#run()} as an
+		 * example.
+		 */
+		void storeTaskIntoHolderBeforeExecute(Thread worker, Runnable task) {
 			var taskHolder = threadLocalTaskHolder.get();
 			if (taskHolder == null) {
 				taskHolder = new TaskHolder();
 				threadLocalTaskHolder.set(taskHolder);
 				runningTasks.add(taskHolder);
+				if (worker == null) worker = Thread.currentThread();
+				final var originalHandler = worker.getUncaughtExceptionHandler();
+				worker.setUncaughtExceptionHandler((thread, error) -> {
+					runningTasks.remove(threadLocalTaskHolder.get());
+					originalHandler.uncaughtException(thread, error);
+				});
 			}
 			taskHolder.task = task;
 		}
@@ -229,7 +240,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			}
 
 			@Override public void run() {
-				storeTaskIntoHolderBeforeExecute(wrappedTask);
+				storeTaskIntoHolderBeforeExecute(null, wrappedTask);
 				try {
 					wrappedTask.run();
 				} finally {

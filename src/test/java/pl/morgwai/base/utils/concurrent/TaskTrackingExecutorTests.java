@@ -2,16 +2,18 @@
 package pl.morgwai.base.utils.concurrent;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.logging.*;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import pl.morgwai.base.utils.SlowTests;
+import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
+		.TaskHolder;
 
 import static java.util.concurrent.TimeUnit.*;
-import static java.util.logging.Level.FINEST;
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.*;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 import static org.junit.Assert.*;
@@ -27,38 +29,26 @@ public abstract class TaskTrackingExecutorTests {
 	protected static final int THREADPOOL_SIZE = 10;
 	protected TaskTrackingExecutor testSubject;
 
-	protected CountDownLatch taskBlockingLatch = new CountDownLatch(1);
-
-	protected Executor expectedRejectingExecutor;
-	Executor rejectingExecutor;
-	Runnable rejectedTask;
-	protected final RejectedExecutionHandler rejectionHandler = (task, executor) -> {
-		rejectedTask = task;
-		rejectingExecutor = executor;
-		throw new RejectedExecutionException("rejected " + task);
-	};
-
-	protected double expectedNoopTaskPerformanceFactor = 1.2d;
-	protected double expected1msTaskPerformanceFactor = 1.015d;
-
 
 
 	@Before
 	public void setup() {
-		testSubject = createTestSubjectAndFinishSetup(THREADPOOL_SIZE, 1);
+		testSubject = createTestSubjectAndFinishSetup(THREADPOOL_SIZE, 1, testThreadFactory);
 	}
 
 	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
-			int threadPoolSize, int queueSize);
+			int threadPoolSize, int queueSize, ThreadFactory threadFactory);
 
 
 
-	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests} */
+	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
 	protected Object unwrapIfScheduled(Runnable task) {
 		return task;
 	}
 
 
+
+	protected CountDownLatch taskBlockingLatch = new CountDownLatch(1);
 
 	class BlockingTask implements Callable<String> {
 
@@ -251,6 +241,15 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
+	protected Executor expectedRejectingExecutor;
+	Executor rejectingExecutor;
+	Runnable rejectedTask;
+	protected final RejectedExecutionHandler rejectionHandler = (task, executor) -> {
+		rejectedTask = task;
+		rejectingExecutor = executor;
+		throw new RejectedExecutionException("rejected " + task);
+	};
+
 	@Test
 	public void testExecutionRejection() throws InterruptedException {
 		final var allTasksStarted = new CountDownLatch(THREADPOOL_SIZE);
@@ -306,6 +305,55 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
+	final CountDownLatch workerDied = new CountDownLatch(1);
+
+	final ThreadFactory testThreadFactory = (task) -> {
+		final var thread = new Thread(task);
+		thread.setUncaughtExceptionHandler((t, e) -> {
+			log.log(FINE, "uncaught exception in " + t, e);
+			workerDied.countDown();
+		});
+		return thread;
+	};
+
+	protected abstract Set<TaskHolder> getRunningTaskHolders();
+
+	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
+	protected void awaitWorkerDeath() throws InterruptedException {
+		assertTrue("worker should die",
+			workerDied.await(50L, MILLISECONDS));
+	}
+
+	@Test
+	public void testDyingWorkersDoNotLeakTaskHolders() throws InterruptedException {
+		final var allTasksStarted = new CountDownLatch(THREADPOOL_SIZE - 1);
+		createAndDispatchBlockingTasks(THREADPOOL_SIZE - 1, allTasksStarted);
+		assertTrue("all tasks should start",
+				allTasksStarted.await(100L, MILLISECONDS));
+		assertEquals("sanity check",
+				THREADPOOL_SIZE - 1, getRunningTaskHolders().size());
+
+		testSubject.execute(() -> {
+			throw new AssertionError("killing worker");
+		});
+		awaitWorkerDeath();
+
+		final var lastTaskStarted = new CountDownLatch(1);
+		CallableTaskExecution.callAsync(new BlockingTask("lastTask", lastTaskStarted), testSubject);
+		assertTrue("lastTask should start",
+				lastTaskStarted.await(50L, MILLISECONDS));
+		assertEquals("sanity check",
+				THREADPOOL_SIZE, testSubject.getRunningTasks().size());
+		assertEquals("dead worker should have removed its taskHolder right before dying",
+				THREADPOOL_SIZE, getRunningTaskHolders().size());
+		taskBlockingLatch.countDown();
+	}
+
+
+
+	protected double expectedNoopTaskPerformanceFactor = 1.2d;
+	protected double expected1msTaskPerformanceFactor = 1.015d;
+
 	@Test
 	@Category({SlowTests.class})
 	public void test10MNoopTasksPerformance() throws InterruptedException {
@@ -333,7 +381,8 @@ public abstract class TaskTrackingExecutorTests {
 		final var threadPoolExecutor = new ThreadPoolExecutor(
 				threadPoolSize, threadPoolSize, 0L, DAYS, new LinkedBlockingQueue<>(numberOfTasks));
 		testSubject.shutdown();
-		testSubject = createTestSubjectAndFinishSetup(threadPoolSize, numberOfTasks);
+		testSubject = createTestSubjectAndFinishSetup(
+				threadPoolSize, numberOfTasks, Executors.defaultThreadFactory());
 		final Runnable warmupTask = () -> {
 			try {
 				taskBlockingLatch.await();

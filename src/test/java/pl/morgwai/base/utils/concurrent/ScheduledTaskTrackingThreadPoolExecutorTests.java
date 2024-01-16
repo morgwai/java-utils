@@ -1,10 +1,13 @@
 // Copyright (c) Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0
 package pl.morgwai.base.utils.concurrent;
 
+import java.util.Set;
 import java.util.concurrent.*;
 
 import org.junit.Test;
 import pl.morgwai.base.utils.concurrent.ScheduledTaskTrackingThreadPoolExecutor.ScheduledExecution;
+import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
+		.TaskHolder;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -25,9 +28,10 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 	@Override
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
 		int threadPoolSize,
-		int queueSize
+		int queueSize,
+		ThreadFactory threadFactory
 	) {
-		scheduler = new ScheduledTaskTrackingThreadPoolExecutor(threadPoolSize);
+		scheduler = new ScheduledTaskTrackingThreadPoolExecutor(threadPoolSize, threadFactory);
 		expected1msTaskPerformanceFactor = 1.03d;
 		return scheduler;
 	}
@@ -44,7 +48,23 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
-	public void testExecutionRejection() {}  // ScheduledExecutor's queue grows until out of memory
+	protected Set<TaskHolder> getRunningTaskHolders() {
+		return scheduler.taskTrackingDecorator.runningTasks;
+	}
+
+
+
+	@Override
+	public void testExecutionRejection() {
+		// ScheduledExecutor's queue grows until out of memory
+	}
+
+
+
+	@Override
+	protected void awaitWorkerDeath() {
+		// task Throwables do not kill workers of ScheduledExecutors
+	}
 
 
 
