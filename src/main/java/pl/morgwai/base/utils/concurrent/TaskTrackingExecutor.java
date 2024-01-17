@@ -12,8 +12,8 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 /**
  * {@link ExecutorService} that allows to obtain a {@link #getRunningTasks() List of currently
  * running tasks}.
- * Useful for monitoring and debugging which tasks got stuck and prevented clean
- * {@link ExecutorService#awaitTermination(long, TimeUnit) termination}.
+ * Useful for debugging which tasks got stuck and prevented clean
+ * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} or for monitoring.
  * @see TaskTrackingThreadPoolExecutor
  * @see ScheduledTaskTrackingThreadPoolExecutor
  */
@@ -88,6 +88,39 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		/**
+		 * Hooking capabilities allow to avoid wrapping tasks with {@link TrackableTask}.
+		 * Note: unless an implementing class states otherwise, hooks are not guaranteed to be
+		 * isolated from each other nor from tasks being executed, so if a hook throws, the others
+		 * and the given task may not be executed.
+		 */
+		public interface HookableExecutor extends ExecutorService {
+			void addBeforeExecuteHook(BiConsumer<Thread, Runnable> hook);
+			void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook);
+		}
+
+
+
+		/** See {@link #TaskTrackingExecutorDecorator(ExecutorService, int)}. */
+		public TaskTrackingExecutorDecorator(
+			HookableExecutor executorToDecorate,
+			int threadPoolSize
+		) {
+			this(executorToDecorate, true, threadPoolSize);
+			executorToDecorate.addBeforeExecuteHook(
+				(worker, task) -> storeTaskIntoHolderBeforeExecute(task));
+			executorToDecorate.addAfterExecuteHook((task, error) -> clearTaskHolderAfterExecute());
+		}
+
+
+
+		/** See {@link #TaskTrackingExecutorDecorator(ExecutorService, int)}. */
+		public TaskTrackingExecutorDecorator(HookableExecutor executorToDecorate) {
+			this(executorToDecorate, -1);
+		}
+
+
+
+		/**
 		 * Decorates {@code executorToDecorate}.
 		 * Calls {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)
 		 * decorateRejectedExecutionHandler(executorToDecorate)} and
@@ -146,33 +179,6 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		/** Hooking capabilities allow to avoid wrapping tasks with {@link TrackableTask}. */
-		public interface HookableExecutor extends ExecutorService {
-			void addBeforeExecuteHook(BiConsumer<Thread, Runnable> hook);
-			void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook);
-		}
-
-
-
-		/** See {@link #TaskTrackingExecutorDecorator(ExecutorService, int)}. */
-		public TaskTrackingExecutorDecorator(
-			HookableExecutor executorToDecorate,
-			int threadPoolSize
-		) {
-			this(executorToDecorate, true, threadPoolSize);
-			executorToDecorate.addBeforeExecuteHook(
-					(worker, task) -> storeTaskIntoHolderBeforeExecute(task));
-			executorToDecorate.addAfterExecuteHook((task, error) -> clearTaskHolderAfterExecute());
-		}
-
-
-
-		public TaskTrackingExecutorDecorator(HookableExecutor executorToDecorate) {
-			this(executorToDecorate, -1);
-		}
-
-
-
 		final boolean backingExecutorHookable;
 
 
@@ -191,6 +197,16 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		@Override
+		public List<Runnable> getRunningTasks() {
+			return runningTasks.stream()
+				.map((holder) -> holder.task)
+				.filter(Objects::nonNull)
+				.collect(toUnmodifiableList());
+		}
+
+
+
+		@Override
 		public List<Runnable> shutdownNow() {
 			return backingExecutorHookable
 					? backingExecutor.shutdownNow()
@@ -198,16 +214,6 @@ public interface TaskTrackingExecutor extends ExecutorService {
 						.map(TrackableTask.class::cast)
 						.map(TrackableTask::getWrappedTask)
 						.collect(toUnmodifiableList());
-		}
-
-
-
-		@Override
-		public List<Runnable> getRunningTasks() {
-			return runningTasks.stream()
-				.map((holder) -> holder.task)
-				.filter(Objects::nonNull)
-				.collect(toUnmodifiableList());
 		}
 
 
