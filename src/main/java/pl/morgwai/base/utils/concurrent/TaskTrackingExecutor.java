@@ -122,11 +122,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 		/**
 		 * Decorates {@code executorToDecorate}.
-		 * Calls {@link #decorateRejectedExecutionHandler(ThreadPoolExecutor)
-		 * decorateRejectedExecutionHandler(executorToDecorate)} and
-		 * {@link #decorateThreadFactory(ThreadFactory)
-		 * executorToDecorate.setThreadFactory(
-		 * decorateThreadFactory(executorToDecorate.getThreadFactory()))} in the process.
+		 * Decorates {@link RejectedExecutionHandler} and {@link ThreadFactory} of
+		 * {@code executorToDecorate} in the process.
 		 * Afterwards {@code executorToDecorate} must be used only via the constructed decorator.
 		 * @throws IllegalStateException if {@code executorToDecorate} is not idle.
 		 */
@@ -136,7 +133,13 @@ public interface TaskTrackingExecutor extends ExecutorService {
 				throw new IllegalStateException(
 						"executor must be idle to decorate it with TaskTrackingExecutorDecorator");
 			}
-			decorateRejectedExecutionHandler(executorToDecorate);
+			final var originalHandler = executorToDecorate.getRejectedExecutionHandler();
+			executorToDecorate.setRejectedExecutionHandler(
+				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
+					((TrackableTask) wrappedTask).wrappedTask,
+					rejectingExecutor
+				)
+			);
 			executorToDecorate.setThreadFactory(
 					decorateThreadFactory(executorToDecorate.getThreadFactory()));
 			final int corePoolSize = executorToDecorate.getCorePoolSize();
@@ -147,24 +150,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		/**
-		 * Decorates {@code executor}'s {@link RejectedExecutionHandler} to unwrap tasks from
-		 * {@link TrackableTask} before passing them to the original handler.
-		 */
-		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
-			final var originalHandler = executor.getRejectedExecutionHandler();
-			executor.setRejectedExecutionHandler(
-				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
-					((TrackableTask) wrappedTask).wrappedTask,
-					rejectingExecutor
-				)
-			);
-		}
-
-
-
-		/**
-		 * Decorates {@code factoryToDecorate} to create worker {@link Thread}s, that remove their
-		 * monitoring hooks from this {@code TaskTrackingExecutorDecorator} after they exit.
+		 * Decorates {@code factoryToDecorate} to create worker {@link Thread}s, that upon their
+		 * exit remove their monitoring hooks from this {@code TaskTrackingExecutorDecorator}.
 		 */
 		public ThreadFactory decorateThreadFactory(ThreadFactory factoryToDecorate) {
 			return (task) -> factoryToDecorate.newThread(() -> {
@@ -310,6 +297,19 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		@Override
 		public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
 			return backingExecutor.awaitTermination(timeout, unit);
+		}
+
+
+
+		@Deprecated(forRemoval = true)
+		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
+			final var originalHandler = executor.getRejectedExecutionHandler();
+			executor.setRejectedExecutionHandler(
+				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
+					((TrackableTask) wrappedTask).wrappedTask,
+					rejectingExecutor
+				)
+			);
 		}
 	}
 }
