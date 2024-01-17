@@ -423,11 +423,12 @@ public abstract class TaskTrackingExecutorTests {
 
 
 	protected double expected1msTaskPerformanceFactor = 1.015d;
+	protected double expectedNoopTaskPerformanceFactor = 1.2d;
 
 	@Test
 	@Category({SlowTests.class})
 	public void test10MNoopTasksPerformance() throws InterruptedException {
-		testPerformance(10_000_000, 0L, 1.2d);
+		testPerformance(10_000_000, 0L, expectedNoopTaskPerformanceFactor);
 	}
 
 	@Test
@@ -442,21 +443,25 @@ public abstract class TaskTrackingExecutorTests {
 		testPerformance(10_000, 1L, expected1msTaskPerformanceFactor);
 	}
 
+	protected ExecutorService createStandardExecutor(int threadPoolSize, int numberOfTasks) {
+		return new ThreadPoolExecutor(
+			threadPoolSize, threadPoolSize,
+			0L, DAYS,
+			new LinkedBlockingQueue<>(numberOfTasks)
+		);
+	}
+
 	public void testPerformance(
 		int numberOfTasks,
 		long taskDurationMillis,
 		double expectedPerformanceFactor
 	) throws InterruptedException {
 		// create executors
-		final var threadPoolSize = Runtime.getRuntime().availableProcessors();
-		final var threadPoolExecutor = new ThreadPoolExecutor(
-			threadPoolSize, threadPoolSize,
-			0L, DAYS,
-			new LinkedBlockingQueue<>(numberOfTasks)
-		);
-		testSubject.shutdown();
+		final var availableCores = Runtime.getRuntime().availableProcessors();
+		log.info("using " + availableCores + " cores");
+		final var standardExecutor = createStandardExecutor(availableCores, numberOfTasks);
 		testSubject = createTestSubjectAndFinishSetup(
-			threadPoolSize,
+			availableCores,
 			numberOfTasks,
 			Executors.defaultThreadFactory(),
 			(rejectedTask, executor) -> {
@@ -464,31 +469,31 @@ public abstract class TaskTrackingExecutorTests {
 			}
 		);
 
-		// warmup threadPoolExecutor
-		final var threadPoolExecutorTaskBlockingLatch = new CountDownLatch(1);
-		final var allThreadPoolExecutorWarmupTasksStarted = new CountDownLatch(threadPoolSize);
+		// warmup standardExecutor
+		final var standardExecutorTaskBlockingLatch = new CountDownLatch(1);
+		final var allStandardExecutorWarmupTasksStarted = new CountDownLatch(availableCores);
 		createAndDispatchBlockingTasks(
-			threadPoolSize,
-			allThreadPoolExecutorWarmupTasksStarted,
-			threadPoolExecutorTaskBlockingLatch,
-			threadPoolExecutor
+			availableCores,
+			allStandardExecutorWarmupTasksStarted,
+			standardExecutorTaskBlockingLatch,
+			standardExecutor
 		);
 		assertTrue("all warmup tasks should start",
-				allThreadPoolExecutorWarmupTasksStarted.await(50L, MILLISECONDS));
-		threadPoolExecutorTaskBlockingLatch.countDown();
+				allStandardExecutorWarmupTasksStarted.await(50L, MILLISECONDS));
+		standardExecutorTaskBlockingLatch.countDown();
 
 		// warmup testSubject
-		final var allWarmupTasksStarted = new CountDownLatch(threadPoolSize);
-		createAndDispatchBlockingTasks(threadPoolSize, allWarmupTasksStarted);
+		final var allWarmupTasksStarted = new CountDownLatch(availableCores);
+		createAndDispatchBlockingTasks(availableCores, allWarmupTasksStarted);
 		assertTrue("all warmup tasks should start",
 				allWarmupTasksStarted.await(50L, MILLISECONDS));
 		taskBlockingLatch.countDown();
 
-		final var threadPoolExecutorDuration =
-				measurePerformance(threadPoolExecutor, numberOfTasks, taskDurationMillis);
+		final var standardExecutorDuration =
+				measurePerformance(standardExecutor, numberOfTasks, taskDurationMillis);
 		final var testSubjectDuration =
 				measurePerformance(testSubject, numberOfTasks, taskDurationMillis);
-		final var performanceFactor = ((double) testSubjectDuration) / threadPoolExecutorDuration;
+		final var performanceFactor = ((double) testSubjectDuration) / standardExecutorDuration;
 
 		if (log.isLoggable(Level.INFO)) log.info(String.format(
 			"%dk of %dms-tasks on %s resulted with %.3fx performanceFactor",

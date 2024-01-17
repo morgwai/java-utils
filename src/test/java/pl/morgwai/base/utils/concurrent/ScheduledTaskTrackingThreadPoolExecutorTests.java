@@ -33,7 +33,6 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 		RejectedExecutionHandler rejectionHandler
 	) {
 		scheduler = new ScheduledTaskTrackingThreadPoolExecutor(threadPoolSize, threadFactory);
-		expected1msTaskPerformanceFactor = 1.03d;
 		return scheduler;
 	}
 
@@ -99,7 +98,21 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
-	public void test10MNoopTasksPerformance() {}  // it's 11x slower...
+	protected ExecutorService createStandardExecutor(int threadPoolSize, int numberOfTasks) {
+		return new ScheduledThreadPoolExecutor(threadPoolSize);
+	}
+
+	@Override
+	public void test10MNoopTasksPerformance() throws InterruptedException {
+		expectedNoopTaskPerformanceFactor = 2.3d;
+		super.test10MNoopTasksPerformance();
+	}
+
+	@Override
+	public void test10k1msTasksPerformance() throws InterruptedException {
+		expected1msTaskPerformanceFactor = 1.03d;
+		super.test10k1msTasksPerformance();
+	}
 
 
 
