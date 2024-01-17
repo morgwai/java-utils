@@ -62,13 +62,6 @@ public abstract class TaskTrackingExecutorTests {
 	protected abstract Set<TaskHolder> getRunningTaskHolders();
 	protected abstract void setMaxPoolSize(int maxPoolSize);
 
-
-
-	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
-	protected boolean uncaughtKillsWorker() {
-		return true;
-	}
-
 	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
 	protected Object unwrapIfScheduled(Runnable task) {
 		return task;
@@ -384,11 +377,8 @@ public abstract class TaskTrackingExecutorTests {
 		testSubject.execute(() -> {
 			throw new AssertionError("killing worker");
 		});
-		if (uncaughtKillsWorker()) {
-			assertTrue("worker should die",
-					workerDied.await(100L, MILLISECONDS));
-		}
-
+		assertTrue("worker should die",
+				workerDied.await(100L, MILLISECONDS));
 		assertEquals("sanity check",
 				THREADPOOL_SIZE - 1, testSubject.getRunningTasks().size());
 		assertEquals("dead worker should have removed its taskHolder right before dying",

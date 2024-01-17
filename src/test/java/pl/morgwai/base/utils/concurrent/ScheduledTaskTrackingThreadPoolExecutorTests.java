@@ -82,11 +82,9 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
-	protected boolean uncaughtKillsWorker() {
-		return false;
+	public void testDyingWorkersDoNotLeakTaskHolders() {
+		// task exceptions don't kill ScheduledExecutor workers
 	}
-
-
 
 	@Override
 	public void testLaidOffWorkersDoNotLeakTaskHolders() {
