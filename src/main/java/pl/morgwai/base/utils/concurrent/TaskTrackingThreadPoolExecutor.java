@@ -44,8 +44,13 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 			threadFactory,
 			handler
 		);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
-		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
+		taskTrackingDecorator = createAndSetupTaskTrackingDecorator();
+	}
+
+	TaskTrackingExecutorDecorator createAndSetupTaskTrackingDecorator() {
+		final var decorator = new TaskTrackingExecutorDecorator(this, getCorePoolSize());
+		setThreadFactory(decorator.decorateThreadFactory(getThreadFactory()));
+		return decorator;
 	}
 
 
@@ -177,8 +182,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 		BlockingQueue<Runnable> workQueue
 	) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
-		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
+		taskTrackingDecorator = createAndSetupTaskTrackingDecorator();
 	}
 
 
@@ -196,8 +200,7 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 		ThreadFactory threadFactory
 	) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
-		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
+		taskTrackingDecorator = createAndSetupTaskTrackingDecorator();
 	}
 
 
@@ -216,7 +219,6 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 		RejectedExecutionHandler handler
 	) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, handler);
-		taskTrackingDecorator = new TaskTrackingExecutorDecorator(this, corePoolSize);
-		setThreadFactory(taskTrackingDecorator.decorateThreadFactory(getThreadFactory()));
+		taskTrackingDecorator = createAndSetupTaskTrackingDecorator();
 	}
 }
