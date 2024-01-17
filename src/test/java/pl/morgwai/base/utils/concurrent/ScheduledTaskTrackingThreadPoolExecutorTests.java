@@ -29,7 +29,8 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
 		int threadPoolSize,
 		int queueSize,
-		ThreadFactory threadFactory
+		ThreadFactory threadFactory,
+		RejectedExecutionHandler rejectionHandler
 	) {
 		scheduler = new ScheduledTaskTrackingThreadPoolExecutor(threadPoolSize, threadFactory);
 		expected1msTaskPerformanceFactor = 1.03d;
@@ -73,6 +74,11 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 		// ScheduledExecutor's queue grows until out of memory
 	}
 
+	@Override
+	protected Executor getExpectedRejectingExecutor() {
+		throw new UnsupportedOperationException();
+	}
+
 
 
 	@Override
@@ -83,12 +89,14 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 
 
 	@Override
-	protected void setMaxPoolSize(int maxPoolSize) {
-		// ScheduledExecutor's pool size is fixed
+	public void testLaidOffWorkersDoNotLeakTaskHolders() {
+		// ScheduledExecutor always uses fixed size pool
 	}
 
 	@Override
-	public void testLaidOffWorkersDoNotLeakTaskHolders() {}
+	protected void setMaxPoolSize(int maxPoolSize) {
+		throw new UnsupportedOperationException();
+	}
 
 
 

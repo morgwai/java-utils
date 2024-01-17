@@ -23,7 +23,8 @@ public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExe
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
 		int threadPoolSize,
 		int queueSize,
-		ThreadFactory threadFactory
+		ThreadFactory threadFactory,
+		RejectedExecutionHandler rejectionHandler
 	) {
 		executor = new TaskTrackingThreadPoolExecutor(
 			threadPoolSize, threadPoolSize,
@@ -32,7 +33,6 @@ public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExe
 			threadFactory,
 			rejectionHandler
 		);
-		expectedRejectingExecutor = executor;
 		return executor;
 	}
 
@@ -43,11 +43,16 @@ public class TaskTrackingThreadPoolExecutorTests extends TaskTrackingHookableExe
 		return executor.getThreadFactory();
 	}
 
-
-
 	@Override
 	protected void setThreadFactory(ThreadFactory threadFactory) {
 		executor.setThreadFactory(threadFactory);
+	}
+
+
+
+	@Override
+	protected Executor getExpectedRejectingExecutor() {
+		return executor;
 	}
 
 

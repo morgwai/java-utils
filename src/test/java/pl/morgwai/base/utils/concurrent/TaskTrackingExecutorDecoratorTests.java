@@ -26,7 +26,8 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 	protected TaskTrackingExecutor createTestSubjectAndFinishSetup(
 		int threadPoolSize,
 		int queueSize,
-		ThreadFactory threadFactory
+		ThreadFactory threadFactory,
+		RejectedExecutionHandler rejectionHandler
 	) {
 		backingExecutor = new ThreadPoolExecutor(
 			threadPoolSize, threadPoolSize,
@@ -39,7 +40,6 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 				afterExecuteHooks.forEach((hook) -> hook.accept(task, error));
 			}
 		};
-		expectedRejectingExecutor = backingExecutor;
 		return new TaskTrackingExecutorDecorator(backingExecutor);
 	}
 
@@ -57,11 +57,16 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 		return backingExecutor.getThreadFactory();
 	}
 
-
-
 	@Override
 	protected void setThreadFactory(ThreadFactory threadFactory) {
 		backingExecutor.setThreadFactory(threadFactory);
+	}
+
+
+
+	@Override
+	protected Executor getExpectedRejectingExecutor() {
+		return backingExecutor;
 	}
 
 

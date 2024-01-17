@@ -38,20 +38,30 @@ public abstract class TaskTrackingExecutorTests {
 		testSubject = createTestSubjectAndFinishSetup(
 			THREADPOOL_SIZE,
 			1,
-			(task) -> new Thread(workerDecorator.apply(task))
+			(task) -> new Thread(workerDecorator.apply(task)),
+			(rejectedTask, executor) -> rejectionHandler.accept(rejectedTask, executor)
 		);
 	}
 
 	protected abstract TaskTrackingExecutor createTestSubjectAndFinishSetup(
-			int threadPoolSize, int queueSize, ThreadFactory threadFactory);
+		int threadPoolSize,
+		int queueSize,
+		ThreadFactory threadFactory,
+		RejectedExecutionHandler rejectionHandler
+	);
+
+	Function<Runnable, Runnable> workerDecorator = Function.identity();
+	BiConsumer<Runnable, Executor> rejectionHandler = (rejectedTask, executor) -> {
+		throw new RejectedExecutionException("executor " + executor + " rejected " + rejectedTask);
+	};
 
 	protected abstract void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook);
 	protected abstract ThreadFactory getThreadFactory();
 	protected abstract void setThreadFactory(ThreadFactory threadFactory);
+	protected abstract Executor getExpectedRejectingExecutor();
 	protected abstract Set<TaskHolder> getRunningTaskHolders();
 	protected abstract void setMaxPoolSize(int maxPoolSize);
 
-	Function<Runnable, Runnable> workerDecorator = Function.identity();
 
 
 	/** For {@link ScheduledTaskTrackingThreadPoolExecutorTests}. */
@@ -285,15 +295,6 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
-	protected Executor expectedRejectingExecutor;
-	Executor rejectingExecutor;
-	Runnable rejectedTask;
-	protected final RejectedExecutionHandler rejectionHandler = (task, executor) -> {
-		rejectedTask = task;
-		rejectingExecutor = executor;
-		throw new RejectedExecutionException("rejected " + task);
-	};
-
 	@Test
 	public void testExecutionRejection() throws InterruptedException {
 		final var allTasksStarted = new CountDownLatch(THREADPOOL_SIZE);
@@ -301,17 +302,25 @@ public abstract class TaskTrackingExecutorTests {
 		assertTrue("all tasks should start",
 				allTasksStarted.await(100L, MILLISECONDS));
 		testSubject.execute(() -> {}); // fill executor's queue
+
 		final Runnable overloadingTask = () -> {};
+		rejectionHandler = (rejectedTask, rejectingExecutor) -> {
+			assertEquals("rejectingExecutor should be expectedRejectingExecutor",
+					getExpectedRejectingExecutor().getClass(), rejectingExecutor.getClass());
+			assertSame("rejectingExecutor should be expectedRejectingExecutor",
+					getExpectedRejectingExecutor(), rejectingExecutor);
+			assertEquals("rejectedTask should be overloadingTask",
+					overloadingTask.getClass(), rejectedTask.getClass());
+			assertSame("rejectedTask should be overloadingTask",
+					overloadingTask, rejectedTask);
+			throw new RejectedExecutionException("rejected " + rejectedTask);
+		};
 
 		try {
 			testSubject.execute(overloadingTask);
 			fail("overloaded executor should throw a RejectedExecutionException");
 		} catch (RejectedExecutionException expected) {}
 		taskBlockingLatch.countDown();
-		assertSame("rejectingExecutor should be expectedRejectingExecutor",
-				expectedRejectingExecutor, rejectingExecutor);
-		assertSame("rejectedTask should be overloadingTask",
-				overloadingTask, rejectedTask);
 	}
 
 
@@ -423,13 +432,12 @@ public abstract class TaskTrackingExecutorTests {
 
 
 
-	protected double expectedNoopTaskPerformanceFactor = 1.2d;
 	protected double expected1msTaskPerformanceFactor = 1.015d;
 
 	@Test
 	@Category({SlowTests.class})
 	public void test10MNoopTasksPerformance() throws InterruptedException {
-		testPerformance(10_000_000, 0L, expectedNoopTaskPerformanceFactor);
+		testPerformance(10_000_000, 0L, 1.2d);
 	}
 
 	@Test
@@ -460,7 +468,10 @@ public abstract class TaskTrackingExecutorTests {
 		testSubject = createTestSubjectAndFinishSetup(
 			threadPoolSize,
 			numberOfTasks,
-			Executors.defaultThreadFactory()
+			Executors.defaultThreadFactory(),
+			(rejectedTask, executor) -> {
+				throw new RejectedExecutionException("rejected " + rejectedTask);
+			}
 		);
 
 		// warmup threadPoolExecutor
