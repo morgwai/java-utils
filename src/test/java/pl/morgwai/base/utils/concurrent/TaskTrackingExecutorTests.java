@@ -361,10 +361,7 @@ public abstract class TaskTrackingExecutorTests {
 		final var originalFactory = getThreadFactory();
 		setThreadFactory((task) -> {
 			final var worker = originalFactory.newThread(task);
-			worker.setUncaughtExceptionHandler((t, e) -> {
-				log.log(FINE, "uncaught exception in " + t, e);
-				workerDied.countDown();
-			});
+			worker.setUncaughtExceptionHandler((thread, exception) -> workerDied.countDown());
 			return worker;
 		});
 		final var allTasksStarted = new CountDownLatch(THREADPOOL_SIZE - 1);
