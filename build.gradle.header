@@ -25,4 +25,5 @@ test {
 	useJUnit {
 		excludeCategories 'pl.morgwai.base.utils.SlowTests'
 	}
+	systemProperty "pl.morgwai.level", System.getProperty("pl.morgwai.level")
 }
