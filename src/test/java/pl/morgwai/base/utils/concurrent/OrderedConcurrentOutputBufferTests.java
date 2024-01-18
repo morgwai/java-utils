@@ -6,10 +6,12 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
+import java.util.logging.Formatter;
 
 import com.google.common.collect.Comparators;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
+import pl.morgwai.base.jul.JulFormatter;
 import pl.morgwai.base.utils.SlowTests;
 import pl.morgwai.base.utils.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
 
@@ -18,6 +20,7 @@ import static java.util.logging.Level.WARNING;
 
 import static org.junit.Assert.*;
 import static pl.morgwai.base.jul.JulConfigurator.*;
+import static pl.morgwai.base.jul.JulFormatter.FORMATTER_SUFFIX;
 
 
 
@@ -444,6 +447,7 @@ public class OrderedConcurrentOutputBufferTests {
 	public static void setupLogging() {
 		addOrReplaceLoggingConfigProperties(Map.of(
 			LEVEL_SUFFIX, WARNING.toString(),
+			ConsoleHandler.class.getName() + FORMATTER_SUFFIX, JulFormatter.class.getName(),
 			ConsoleHandler.class.getName() + LEVEL_SUFFIX, FINEST.toString()
 		));
 		overrideLogLevelsWithSystemProperties("pl.morgwai");

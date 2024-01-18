@@ -10,6 +10,7 @@ import java.util.logging.*;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
+import pl.morgwai.base.jul.JulFormatter;
 import pl.morgwai.base.utils.SlowTests;
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
 		.TaskHolder;
@@ -20,6 +21,7 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 
 import static org.junit.Assert.*;
 import static pl.morgwai.base.jul.JulConfigurator.*;
+import static pl.morgwai.base.jul.JulFormatter.FORMATTER_SUFFIX;
 import static pl.morgwai.base.utils.concurrent.CallableTaskExecution.callAsync;
 
 
@@ -566,6 +568,7 @@ public abstract class TaskTrackingExecutorTests {
 	public static void setupLogging() {
 		addOrReplaceLoggingConfigProperties(Map.of(
 			LEVEL_SUFFIX, WARNING.toString(),
+			ConsoleHandler.class.getName() + FORMATTER_SUFFIX, JulFormatter.class.getName(),
 			ConsoleHandler.class.getName() + LEVEL_SUFFIX, FINEST.toString()
 		));
 		overrideLogLevelsWithSystemProperties("pl.morgwai");
