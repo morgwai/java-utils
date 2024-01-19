@@ -1,6 +1,7 @@
 # Java utils
 
 Some utility classes.<br/>
+Copyright 2021 Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0.<br/>
 <br/>
 **latest release: [4.0](https://search.maven.org/artifact/pl.morgwai.base/java-utils/4.0/jar)**
 ([javadoc](https://javadoc.io/doc/pl.morgwai.base/java-utils/4.0))
