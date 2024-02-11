@@ -298,18 +298,5 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
 			return backingExecutor.awaitTermination(timeout, unit);
 		}
-
-
-
-		@Deprecated(forRemoval = true)
-		public static void decorateRejectedExecutionHandler(ThreadPoolExecutor executor) {
-			final var originalHandler = executor.getRejectedExecutionHandler();
-			executor.setRejectedExecutionHandler(
-				(wrappedTask, rejectingExecutor) -> originalHandler.rejectedExecution(
-					((TrackableTask) wrappedTask).wrappedTask,
-					rejectingExecutor
-				)
-			);
-		}
 	}
 }
