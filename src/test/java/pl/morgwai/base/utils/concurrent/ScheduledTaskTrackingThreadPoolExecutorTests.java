@@ -138,7 +138,7 @@ public class ScheduledTaskTrackingThreadPoolExecutorTests extends TaskTrackingHo
 				return "scheduledTask";
 			}
 		};
-		final var delayMillis = 10L;
+		final var delayMillis = 100L;
 
 		final var scheduledExecution =
 				scheduler.scheduleWithFixedDelay(scheduledTask, 0L, delayMillis, MILLISECONDS);
