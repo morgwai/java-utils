@@ -4,16 +4,14 @@ package pl.morgwai.base.utils.concurrent;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.function.BiConsumer;
+import org.junit.Test;
 
 import com.google.common.collect.Comparators;
-import org.junit.Test;
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
 		.HookableExecutor;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 
 

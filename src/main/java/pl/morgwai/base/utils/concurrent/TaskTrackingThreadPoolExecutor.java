@@ -11,7 +11,7 @@ import static java.util.concurrent.TimeUnit.DAYS;
 
 
 
-/** A {@link TaskTrackingExecutor} based on a {@link ThreadPoolExecutor}. */
+/** {@link TaskTrackingExecutor} based on a {@link ThreadPoolExecutor}. */
 public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 		implements TaskTrackingExecutor, TaskTrackingExecutorDecorator.HookableExecutor {
 

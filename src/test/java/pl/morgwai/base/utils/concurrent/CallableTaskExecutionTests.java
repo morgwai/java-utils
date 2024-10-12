@@ -2,11 +2,9 @@
 package pl.morgwai.base.utils.concurrent;
 
 import java.util.concurrent.*;
-
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.*;
-
 import static org.junit.Assert.*;
 import static pl.morgwai.base.utils.concurrent.CallableTaskExecution.callAsync;
 
@@ -23,25 +21,22 @@ public class CallableTaskExecutionTests {
 	@Test
 	public void testCallAsyncPropagatesTaskResults() throws Exception {
 		final var result = "result";
-		final var execution = callAsync(() -> result);
-		assertSame("result of execution should be the same as returned by the task",
-				result, execution.get(50L, MILLISECONDS));
+		assertSame("result of callAsync should be the same as returned by the task",
+				result, callAsync(() -> result).get(50L, MILLISECONDS));
 	}
 
 
 
 	@Test
 	public void testCallAsyncPropagatesTaskExceptions()
-		throws InterruptedException, TimeoutException {
+			throws InterruptedException, TimeoutException {
 		final var thrown = new Exception("thrown");
 
 		final var execution = callAsync(
 			() -> { throw thrown; },
 			Executors.newSingleThreadExecutor()
 		).whenComplete(
-			(result, caught) -> {
-				if (result == null) asyncError = caught;
-			}
+			(result, caught) -> { if (result == null) asyncError = caught; }
 		);
 		try {
 			execution.get(50L, MILLISECONDS);
@@ -61,7 +56,7 @@ public class CallableTaskExecutionTests {
 		final var executor = Executors.newSingleThreadExecutor();
 		final var blockingTaskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
-		callAsync(  // make executor's thread busy
+		callAsync(  // make executor's Thread busy
 			() -> {
 				blockingTaskStarted.countDown();
 				taskBlockingLatch.await();
@@ -70,12 +65,8 @@ public class CallableTaskExecutionTests {
 			executor
 		);
 		final var testTask = new Callable<String>() {
-			@Override public String call() {
-				return "";
-			}
-			@Override public String toString() {
-				return "testTask";
-			}
+			@Override public String call() { return ""; }
+			@Override public String toString() { return "testTask"; }
 		};
 		callAsync(testTask, executor);
 		assertTrue("blocking task should start",
@@ -102,7 +93,7 @@ public class CallableTaskExecutionTests {
 		final var executor = new ThreadPoolExecutor(1, 1, 0L, DAYS, new LinkedBlockingQueue<>(1));
 		final var blockingTaskStarted = new CountDownLatch(1);
 		final var taskBlockingLatch = new CountDownLatch(1);
-		executor.execute(() -> {  // make executor's thread busy
+		executor.execute(() -> {  // make executor's Thread busy
 			blockingTaskStarted.countDown();
 			try {
 				taskBlockingLatch.await();

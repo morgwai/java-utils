@@ -2,11 +2,9 @@
 package pl.morgwai.base.utils.concurrent;
 
 import java.util.concurrent.CountDownLatch;
-
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import static org.junit.Assert.*;
 import static pl.morgwai.base.utils.concurrent.ConcurrentUtils.waitForMonitorCondition;
 

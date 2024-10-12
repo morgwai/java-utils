@@ -4,13 +4,12 @@ package pl.morgwai.base.utils.concurrent;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.IntStream;
+import org.junit.Test;
 
 import com.google.common.collect.Comparators;
-import org.junit.Test;
 import pl.morgwai.base.utils.concurrent.Awaitable.AwaitInterruptedException;
 
 import static java.util.concurrent.TimeUnit.*;
-
 import static org.junit.Assert.*;
 
 

@@ -6,18 +6,16 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
-import java.util.logging.Formatter;
-
-import com.google.common.collect.Comparators;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Comparators;
 import pl.morgwai.base.jul.JulFormatter;
 import pl.morgwai.base.utils.SlowTests;
 import pl.morgwai.base.utils.concurrent.OrderedConcurrentOutputBuffer.OutputStream;
 
 import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.WARNING;
-
 import static org.junit.Assert.*;
 import static pl.morgwai.base.jul.JulConfigurator.*;
 import static pl.morgwai.base.jul.JulFormatter.FORMATTER_SUFFIX;
@@ -65,7 +63,7 @@ public class OrderedConcurrentOutputBufferTests {
 
 
 
-	/** Create a new message for the bucket thread number {@code bucketNumber}. */
+	/** Create a new message for the bucket {@code Thread} number {@code bucketNumber}. */
 	Message nextMessage(int bucketNumber) {
 		return new Message(bucketNumber, ++bucketMessageNumbers[bucketNumber - 1]);
 	}

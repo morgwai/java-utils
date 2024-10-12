@@ -12,8 +12,8 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 /**
  * {@link ExecutorService} that allows to obtain a {@link #getRunningTasks() List of currently
  * running tasks}.
- * Useful for debugging which tasks got stuck and prevented clean
- * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} or for monitoring.
+ * Useful for monitoring or debugging which tasks got stuck and prevented clean
+ * {@link ExecutorService#awaitTermination(long, TimeUnit) termination}.
  * @see TaskTrackingThreadPoolExecutor
  * @see ScheduledTaskTrackingThreadPoolExecutor
  */
@@ -23,9 +23,9 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 	/**
 	 * Returns a {@code List} of tasks currently being run by the worker {@code Threads}.
-	 * Unless stated otherwise by an implementing class, this may be a subject to all kind of races
-	 * and thus may sometimes not even be fully consistent with any point in the past. This method
-	 * is intended for spotting long-running or stuck tasks or for general overview of types
+	 * Unless stated otherwise by an implementing class, the result may be a subject to all kind of
+	 * races and thus may sometimes not even be fully consistent with any point in the past. This
+	 * method is intended for spotting long-running or stuck tasks or for general overview of types
 	 * of tasks being executed.
 	 */
 	List<Runnable> getRunningTasks();
@@ -51,7 +51,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 	/**
-	 * Decorator for an {@link ExecutorService} that makes it a {@link TaskTrackingExecutor}.
+	 * Decorator for an {@link ExecutorService} that converts it to a {@link TaskTrackingExecutor}.
 	 * @see TaskTrackingThreadPoolExecutor
 	 * @see ScheduledTaskTrackingThreadPoolExecutor
 	 */
@@ -88,15 +88,23 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 		/**
-		 * Hooking capabilities allow to avoid wrapping tasks with {@link TrackableTask}.
+		 * {@link ExecutorService} that allows to add before- and after- task execution hooks.
+		 * Hooking capabilities allow {@link TaskTrackingExecutorDecorator} to avoid wrapping tasks
+		 * with {@link TrackableTask} which may improve performance in case of a large number of
+		 * very short tasks.
+		 * <p>
 		 * Note: unless an implementing class states otherwise, hooks are not guaranteed to be
 		 * isolated from each other nor from tasks being executed, so if a hook throws, the others
-		 * and the given task may not be executed.
+		 * and the given task may not be executed at all.</p>
 		 */
 		public interface HookableExecutor extends ExecutorService {
 			void addBeforeExecuteHook(BiConsumer<Thread, Runnable> hook);
 			void addAfterExecuteHook(BiConsumer<Runnable, Throwable> hook);
 		}
+
+
+
+		final boolean backingExecutorHookable;
 
 
 
@@ -107,8 +115,9 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		) {
 			this(executorToDecorate, true, threadPoolSize);
 			executorToDecorate.addBeforeExecuteHook(
-				(worker, task) -> storeTaskIntoHolderBeforeExecute(task));
-			executorToDecorate.addAfterExecuteHook((task, error) -> clearTaskHolderAfterExecute());
+					(worker, task) -> storeTaskIntoHolderBeforeExecuting(task));
+			executorToDecorate.addAfterExecuteHook(
+					(task, error) -> clearTaskHolderAfterExecuting());
 		}
 
 
@@ -166,10 +175,6 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		final boolean backingExecutorHookable;
-
-
-
 		TaskTrackingExecutorDecorator(
 			ExecutorService executorToDecorate,
 			boolean backingExecutorHookable,
@@ -209,7 +214,7 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		void storeTaskIntoHolderBeforeExecute(Runnable task) {
+		void storeTaskIntoHolderBeforeExecuting(Runnable task) {
 			var taskHolder = threadLocalTaskHolder.get();
 			if (taskHolder == null) {
 				taskHolder = new TaskHolder();
@@ -221,17 +226,17 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
-		void clearTaskHolderAfterExecute() {
+		void clearTaskHolderAfterExecuting() {
 			threadLocalTaskHolder.get().task = null;
 		}
 
 
 
 		/**
-		 * Wraps {@code task} with a {@link TrackableTask} if needed and passes it to its backing
-		 * executor.
-		 * If the backing executor is a {@link HookableExecutor}, no wrapping is needed and
-		 * {@code task} is directly passed to the backing executor.
+		 * Wraps {@code task} with a {@link TrackableTask} if needed and passes it to the backing
+		 * {@code Executor}.
+		 * If the backing {@code Executor} is a {@link HookableExecutor}, no wrapping is needed and
+		 * {@code task} is passed directly.
 		 */
 		@Override
 		public void execute(Runnable task) {
@@ -251,11 +256,11 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			}
 
 			@Override public void run() {
-				storeTaskIntoHolderBeforeExecute(wrappedTask);
+				storeTaskIntoHolderBeforeExecuting(wrappedTask);
 				try {
 					wrappedTask.run();
 				} finally {
-					clearTaskHolderAfterExecute();
+					clearTaskHolderAfterExecuting();
 				}
 			}
 

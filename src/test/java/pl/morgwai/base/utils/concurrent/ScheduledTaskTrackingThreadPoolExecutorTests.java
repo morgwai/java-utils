@@ -3,16 +3,14 @@ package pl.morgwai.base.utils.concurrent;
 
 import java.util.Set;
 import java.util.concurrent.*;
-
 import org.junit.Test;
+
 import pl.morgwai.base.utils.concurrent.ScheduledTaskTrackingThreadPoolExecutor.ScheduledExecution;
 import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecutorDecorator
 		.TaskHolder;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertSame;
 
 
 

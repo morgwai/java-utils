@@ -6,8 +6,9 @@ import java.io.ByteArrayOutputStream;
 
 
 /**
- * A {@link ByteArrayOutputStream} that allows to directly {@link #getBuffer() access its underlying
- * buffer} after the stream was closed. Forbids further writing and resetting after its closure.
+ * {@link ByteArrayOutputStream} that allows to directly {@link #getBuffer() access its underlying
+ * buffer} after the stream was closed.
+ * Forbids further writing and resetting after its closure.
  */
 public class NoCopyByteArrayOutputStream extends ByteArrayOutputStream {
 

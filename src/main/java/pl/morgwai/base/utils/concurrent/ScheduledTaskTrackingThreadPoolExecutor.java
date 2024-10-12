@@ -10,17 +10,17 @@ import pl.morgwai.base.utils.concurrent.TaskTrackingExecutor.TaskTrackingExecuto
 
 
 /**
- * A {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTrackingExecutor}.
+ * {@link ScheduledThreadPoolExecutor} that is also a {@link TaskTrackingExecutor}.
  * Decorates scheduled items with {@link ScheduledExecution}, so that the original tasks can be
  * obtained from the result of {@link #getRunningTasks()}.
  * <p>
  * <b>NOTE:</b> due to the design of
  * {@link ScheduledThreadPoolExecutor#decorateTask(Runnable, RunnableScheduledFuture) task
- * decorating in ScheduledThreadPoolExecutor} this class is <i>extremely</i> slow in case of
- * a large number of very tiny tasks. See
+ * decorating in ScheduledThreadPoolExecutor}, this class is <i>extremely</i> slow in case of a
+ * large number of very short tasks. See
  * <a href="https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/share/classes/
 java/util/concurrent/ScheduledThreadPoolExecutor.java#L903-L915">
- * the comment with an explanation in the source</a>.</p>
+ * the comment with an explanation in the JDK source</a>.</p>
  */
 public class ScheduledTaskTrackingThreadPoolExecutor extends ScheduledThreadPoolExecutor
 		implements TaskTrackingExecutor, TaskTrackingExecutorDecorator.HookableExecutor {

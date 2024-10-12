@@ -8,8 +8,9 @@ import java.util.function.IntFunction;
 
 
 /**
- * A factory that names new {@link Thread}s based on constructor supplied generator/name.
- * Each instance has an associated {@link ThreadGroup}, which newly created {@link Thread}s will
+ * {@link ThreadFactory} that names new {@link Thread}s based on a constructor supplied
+ * generator/name.
+ * Each instance is associated with a {@link ThreadGroup} which newly created {@link Thread}s will
  * belong to.
  */
 public class NamingThreadFactory implements ThreadFactory {
@@ -23,10 +24,11 @@ public class NamingThreadFactory implements ThreadFactory {
 
 
 	/**
-	 * Constructs a factory that will create non-daemon threads with {@link Thread#NORM_PRIORITY}
-	 * and names constructed using scheme {@code <name>-thread-<sequenceNumber>}. Created threads
-	 * will belong to a newly created {@link ThreadGroup} named {@code name} associated with this
-	 * factory.
+	 * Constructs a {@code ThreadFactory} that will create non-daemon {@link Thread}s with
+	 * {@link Thread#NORM_PRIORITY} and names constructed using scheme
+	 * {@code <name>-thread-<sequenceNumber>}.
+	 * Created {@link Thread}s will belong to a newly created {@link ThreadGroup} named {@code name}
+	 * associated with this {@code ThreadFactory}.
 	 */
 	public NamingThreadFactory(String name) {
 		this(createThreadGroup(name), (i) -> name + "-thread-" + i);
@@ -46,8 +48,9 @@ public class NamingThreadFactory implements ThreadFactory {
 
 
 	/**
-	 * Constructs a factory that will create threads inside {@code threadGroup} with names
-	 * constructed using {@code threadNameGenerator}. Created threads will derive priority from
+	 * Constructs a {@code ThreadFactory} that will create {@link Thread}s belonging to
+	 * {@code threadGroup} with names constructed using {@code threadNameGenerator}.
+	 * Created {@link Thread}s will derive priority from
 	 * {@link ThreadGroup#getMaxPriority() threadGroup.getMaxPriority()} and daemon status from
 	 * {@link ThreadGroup#isDaemon() threadGroup.isDaemon()}.
 	 */

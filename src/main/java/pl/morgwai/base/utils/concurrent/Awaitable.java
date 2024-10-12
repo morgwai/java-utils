@@ -26,7 +26,7 @@ public interface Awaitable {
 
 
 	/**
-	 * A timed blocking operation}, such as {@link Thread#join(long)}, {@link Object#wait(long)},
+	 * A timed blocking operation, such as {@link Thread#join(long)}, {@link Object#wait(long)},
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit)} etc.
 	 * @return {@code true} if operation succeeds before {@code timeoutMillis} passes, {@code false}
 	 *     otherwise.
@@ -77,11 +77,11 @@ public interface Awaitable {
 	/**
 	 * Creates an {@link Awaitable.WithUnit} of {@link Thread#join(long, int) joining a thread}.
 	 * The result is based on {@link Thread#isAlive()}. If {@code 0} is passed as {@code timeout},
-	 * the operation will wait forever for the thread to finish, similarly to the semantics of
+	 * the operation will wait forever for {@code thread} to finish, similarly to the semantics of
 	 * {@link Thread#join(long) join(0)} (note that non of the
 	 * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} methods will ever pass {@code 0} to
 	 * any of its operations as a result of real time flow, except if {@code 0} was originally
-	 * passed as combined {@code timeout}).
+	 * passed as joint {@code timeout}).
 	 */
 	static Awaitable.WithUnit ofJoin(Thread thread) {
 		return (timeout, unit) -> {
@@ -135,23 +135,23 @@ public interface Awaitable {
 	 * {@code awaitableEntries}.
 	 * Each {@link Entry Entry} maps an {@link Entry#getObject() object} on which an operation
 	 * should be performed (for example a {@link Thread} to be {@link Thread#join(long) joined} or
-	 * an {@link ExecutorService executor} to be
+	 * an {@link ExecutorService Executor} to be
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) terminated}) to a
 	 * {@link Entry#getOperation() closure performing this operation}.
 	 * <p>
 	 * If {@code timeout} passes before all operations are completed, continues to perform the
 	 * remaining ones with {@code 1} nanosecond timeout.<br/>
-	 * If {@code continueOnInterrupt} is {@code true}, does so also in case
+	 * If {@code continueOnInterrupt} is {@code true}, does so also in case an
 	 * {@link InterruptedException} is thrown by any of the operations.<br/>
-	 * If {@code timeout} argument is {@code 0} then all operations will receive {@code 0} timeout.
+	 * If {@code timeout} argument is {@code 0}, then all operations will receive {@code 0} timeout.
 	 * Note that different methods may interpret it in different ways: <i>"return false if cannot
 	 * complete operation immediately"</i> like
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit)} or <i>"block without a timeout until
 	 * operation is completed"</i> like {@link Thread#join(long)}.</p>
 	 * <p>
-	 * Note: internally all time measurements are done in nanoseconds, hence this function is not
-	 * suitable for timeouts spanning several decades (not that it would make much sense, but I'm
-	 * just sayin...&nbsp;;-)&nbsp;&nbsp;).</p>
+	 * Note: internally all time measurements are performed in nanoseconds, hence this function is
+	 * not suitable for timeouts spanning several decades (not that it would make much sense, but
+	 * I'm just sayin...&nbsp;;-)&nbsp;&nbsp;).</p>
 	 * <p>
 	 * Note: this is a "low-level" core version: there are several "frontend" functions defined in
 	 * this class with more convenient API divided into 3 families:</p>
@@ -171,9 +171,9 @@ public interface Awaitable {
 	 * Within each family there are variants that either accept {@code (long timeout, TimeUnit
 	 * unit)} params or a single {@code long timeoutMillis} param and variants that either accept
 	 * {@code boolean continueOnInterrupt} param or always pass {@code true}.</p>
-	 * @return an empty {@link List} if all {@link Awaitable operations} completed, otherwise a
-	 * {@link List} of object whose operations failed.
-	 * @throws AwaitInterruptedException if any of the operations throws
+	 * @return an empty {@link List} if all {@link Awaitable operations} completed successfully,
+	 *     otherwise a {@link List} of object whose operations failed.
+	 * @throws AwaitInterruptedException if any of the operations throws an
 	 *     {@link InterruptedException}.
 	 */
 	static <T> List<T> awaitMultiple(
@@ -251,9 +251,10 @@ public interface Awaitable {
 
 
 	/**
-	 * An {@link InterruptedException} that contains results of
-	 * {@link Awaitable Awaitable operations} passed to an interrupted
-	 * {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultipe(...)}.
+	 * {@link InterruptedException} that contains results of {@link Awaitable Awaitable operations}
+	 * passed to a
+	 * {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultipe(...)} call
+	 * that was later interrupted.
 	 */
 	class AwaitInterruptedException extends InterruptedException {
 

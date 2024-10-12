@@ -14,7 +14,7 @@ public interface ConcurrentUtils {
 	/**
 	 * Similar to {@link Object#wait(long, int)}, but <b>not</b> affected by <i>spurious wakeup</i>
 	 * nor by {@link Object#notifyAll() notifications} not related to {@code condition}.
-	 * The calling thread must already own {@code monitor}'s lock, similarly when calling
+	 * The calling {@code Thread} must already own {@code monitor}'s lock, similarly when calling
 	 * {@link Object#wait(long, int)}.
 	 * <p>
 	 * Internally this method performs {@link Object#wait(long, int) waiting} and {@code timeout}

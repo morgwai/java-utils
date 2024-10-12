@@ -7,8 +7,8 @@ import java.util.function.*;
 
 
 /**
- * Adapter for a {@link Callable} so that it may be passed to {@link Executor#execute(Runnable)} and
- * its result accessed using {@link java.util.concurrent.CompletableFuture} API.
+ * Adapter for a {@link Callable} that allows to pass it to {@link Executor#execute(Runnable)} and
+ * access  its result using {@link java.util.concurrent.CompletableFuture} API.
  */
 public class CallableTaskExecution<T> extends CompletableFuture<T> implements RunnableFuture<T> {
 
@@ -26,7 +26,8 @@ public class CallableTaskExecution<T> extends CompletableFuture<T> implements Ru
 
 
 	/**
-	 * Calls {@link #task} and {@link #complete(Object) completes} this {@code CompletableFuture}.
+	 * Calls {@link #task} and {@link #complete(Object) completes} this {@code CompletableFuture}
+	 * with the result.
 	 * If {@link #task} throws, {@link CompletableFuture#completeExceptionally(Throwable)} is called
 	 * instead.
 	 */
@@ -52,13 +53,16 @@ public class CallableTaskExecution<T> extends CompletableFuture<T> implements Ru
 	 * Similar to {@link CompletableFuture#supplyAsync(Supplier, Executor)}, but takes a
 	 * {@link Callable} argument.
 	 * If {@link Callable#call() task.call()} throws, the {@link Exception} will be passed to
-	 * {@link #completeExceptionally(Throwable)} directly.
+	 * {@link #completeExceptionally(Throwable)} directly (without wrapping with a
+	 * {@link CompletionException} unlike
+	 * {@link CompletableFuture#supplyAsync(Supplier, Executor) supplyAsync(...)} does with
+	 * {@link RuntimeException}s).
 	 * <p>
 	 * Internally {@code task} is wrapped with a {@link CallableTaskExecution}, so in case
 	 * {@code executor}
 	 * {@link RejectedExecutionHandler#rejectedExecution(Runnable, ThreadPoolExecutor) rejects}
 	 * {@code task} or {@link ExecutorService#shutdownNow() executor.shutdownNow()} is called,
-	 * {@link CallableTaskExecution#getTask()} can be used to obtain the original.</p>
+	 * {@link CallableTaskExecution#getTask()} may be used to obtain the original.</p>
 	 */
 	public static <R> CallableTaskExecution<R> callAsync(Callable<R> task, Executor executor) {
 		final var taskExecution = new CallableTaskExecution<>(task);
