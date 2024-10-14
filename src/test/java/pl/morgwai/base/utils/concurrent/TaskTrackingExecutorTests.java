@@ -489,8 +489,11 @@ public abstract class TaskTrackingExecutorTests {
 
 		final var standardExecutorDuration =
 				measurePerformance(standardExecutor, numberOfTasks, taskDurationMillis);
+		System.gc();
+		Thread.sleep(50L);
 		final var testSubjectDuration =
 				measurePerformance(testSubject, numberOfTasks, taskDurationMillis);
+		System.gc();
 		final var performanceFactor = ((double) testSubjectDuration) / standardExecutorDuration;
 
 		if (log.isLoggable(Level.INFO)) log.info(String.format(
