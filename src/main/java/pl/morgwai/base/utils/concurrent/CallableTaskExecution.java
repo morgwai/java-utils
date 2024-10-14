@@ -35,7 +35,7 @@ public class CallableTaskExecution<T> extends CompletableFuture<T> implements Ru
 	public void run() {
 		try {
 			complete(task.call());
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			completeExceptionally(e);
 		}
 	}
@@ -52,7 +52,7 @@ public class CallableTaskExecution<T> extends CompletableFuture<T> implements Ru
 	/**
 	 * Similar to {@link CompletableFuture#supplyAsync(Supplier, Executor)}, but takes a
 	 * {@link Callable} argument.
-	 * If {@link Callable#call() task.call()} throws, the {@link Exception} will be passed to
+	 * If {@link Callable#call() task.call()} throws, the {@link Throwable} will be passed to
 	 * {@link #completeExceptionally(Throwable)} directly (without wrapping with a
 	 * {@link CompletionException} unlike
 	 * {@link CompletableFuture#supplyAsync(Supplier, Executor) supplyAsync(...)} does with
