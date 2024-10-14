@@ -105,10 +105,10 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 			}
 
 			// return the current tailGuard after adding a new one after it
-			tailGuard.next = new Bucket();
-			final var result = tailGuard;
-			tailGuard = tailGuard.next;
-			return result;
+			final var newRealTail = tailGuard;
+			tailGuard = new Bucket();
+			newRealTail.next = tailGuard;
+			return newRealTail;
 		}
 	}
 
