@@ -114,6 +114,16 @@ public class TaskTrackingThreadPoolExecutor extends ThreadPoolExecutor
 
 	/**
 	 * Calls {@link #TaskTrackingThreadPoolExecutor(int, int, long, TimeUnit, BlockingQueue)
+	 * this(poolSize, poolSize, 0L, DAYS, new LinkedBlockingQueue<>(), threadFactory)}.
+	 */
+	public TaskTrackingThreadPoolExecutor(int poolSize, ThreadFactory threadFactory) {
+		this(poolSize, poolSize, 0L, DAYS, new LinkedBlockingQueue<>(), threadFactory);
+	}
+
+
+
+	/**
+	 * Calls {@link #TaskTrackingThreadPoolExecutor(int, int, long, TimeUnit, BlockingQueue)
 	 * this(poolSize, poolSize, 0L, DAYS, new LinkedBlockingQueue<>(queueSize))}.
 	 */
 	public TaskTrackingThreadPoolExecutor(int poolSize, int queueSize) {
