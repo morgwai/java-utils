@@ -3,8 +3,8 @@
 Some utility classes.<br/>
 Copyright 2021 Piotr Morgwai Kotarbinski, Licensed under the Apache License, Version 2.0.<br/>
 <br/>
-**latest release: [5.0](https://search.maven.org/artifact/pl.morgwai.base/java-utils/5.0/jar)**
-([javadoc](https://javadoc.io/doc/pl.morgwai.base/java-utils/5.0))
+**latest release: [5.1](https://search.maven.org/artifact/pl.morgwai.base/java-utils/5.1/jar)**
+([javadoc](https://javadoc.io/doc/pl.morgwai.base/java-utils/5.1))
 
 **Note:** from version 2.0, `java.util.logging` utilities have been moved to a separate [repo](https://github.com/morgwai/jul-utils).
 
