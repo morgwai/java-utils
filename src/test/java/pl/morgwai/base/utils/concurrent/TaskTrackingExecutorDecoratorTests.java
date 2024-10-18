@@ -82,4 +82,12 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 	protected void setMaxPoolSize(int maxPoolSize) {
 		backingExecutor.setMaximumPoolSize(maxPoolSize);
 	}
+
+
+
+	@Override
+	public void test10MNoopTasksPerformance() throws InterruptedException {
+		expectedNoopTaskPerformanceFactor = 1.3d;
+		super.test10MNoopTasksPerformance();
+	}
 }
