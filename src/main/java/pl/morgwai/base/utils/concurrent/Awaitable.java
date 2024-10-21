@@ -112,10 +112,11 @@ public interface Awaitable {
 
 	/**
 	 * Creates an {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
-	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}.
-	 * If {@code executor} fails to terminate, {@link ExecutorService#shutdownNow()} is called.
-	 * @return {@code true} if and only if {@code executor} shutdown cleanly and did not require
-	 * {@link ExecutorService#shutdownNow()} to be called. {@code false} otherwise.
+	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}, if
+	 * {@code executor} fails to terminate, {@link ExecutorService#shutdownNow() shutdownNow()} is
+	 * called {@code finally}.
+	 * @return the result of
+	 *     {@link ExecutorService#awaitTermination(long, TimeUnit) executor.awaitTermination(...)}.
 	 */
 	static Awaitable.WithUnit ofEnforcedTermination(ExecutorService executor) {
 		return (timeout, unit) -> {

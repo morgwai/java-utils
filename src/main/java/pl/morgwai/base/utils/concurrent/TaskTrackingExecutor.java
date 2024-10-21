@@ -32,18 +32,34 @@ public interface TaskTrackingExecutor extends ExecutorService {
 
 
 
+	/** Returns {@link Awaitable#ofTermination(ExecutorService) Awaitable.ofTermination(this)}. */
 	default Awaitable.WithUnit toAwaitableOfTermination() {
 		return Awaitable.ofTermination(this);
 	}
 
 
 
+	/**
+	 * Returns {@link Awaitable#ofEnforcedTermination(ExecutorService)
+	 * Awaitable.ofEnforcedTermination(this)}.
+	 */
 	default Awaitable.WithUnit toAwaitableOfEnforcedTermination() {
 		return Awaitable.ofEnforcedTermination(this);
 	}
 
 
 
+	/**
+	 * Calls {@link #toAwaitableOfEnforcedTermination()}.{@link
+	 * Awaitable.WithUnit#await(long, TimeUnit) await(timeout, unit)}.
+	 */
+	default boolean tryEnforceTermination(long timeout, TimeUnit unit) throws InterruptedException {
+		return Awaitable.ofEnforcedTermination(this).await(timeout, unit);
+	}
+
+
+
+	/** {@link #awaitTermination(long, TimeUnit) Awaits termination} without a timeout. */
 	default void awaitTermination() throws InterruptedException {
 		while ( !awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS));
 	}
