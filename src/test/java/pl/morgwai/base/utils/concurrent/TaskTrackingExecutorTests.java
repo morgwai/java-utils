@@ -490,7 +490,7 @@ public abstract class TaskTrackingExecutorTests {
 		final var standardExecutorDuration =
 				measurePerformance(standardExecutor, numberOfTasks, taskDurationMillis);
 		System.gc();
-		Thread.sleep(100L);
+		if (numberOfTasks < 10_000) Thread.sleep(30L); else Thread.sleep(500L);
 		final var testSubjectDuration =
 				measurePerformance(testSubject, numberOfTasks, taskDurationMillis);
 		System.gc();
