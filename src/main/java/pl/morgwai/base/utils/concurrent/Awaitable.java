@@ -140,10 +140,21 @@ public interface Awaitable {
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) terminated}) to a
 	 * {@link Entry#getOperation() closure performing this operation}.
 	 * <p>
-	 * If {@code timeout} passes before all operations are completed, continues to perform the
-	 * remaining ones with {@code 1} nanosecond timeout.<br/>
-	 * If {@code continueOnInterrupt} is {@code true}, does so also in case an
-	 * {@link InterruptedException} is thrown by any of the operations.<br/>
+	 * If {@code timeout} passes before all operations are completed, the remaining ones will still
+	 * be performed given {@code 1} nanosecond timeout each. This allows any operations that have
+	 * already been completed in parallel, to report their successful status.</p>
+	 * <p>
+	 * If any of the operations throws an {@link InterruptedException}, then an
+	 * {@link AwaitInterruptedException} will be eventually thrown by this method and all the
+	 * corresponding {@link Entry#getObject() objects} of such operations will be available via
+	 * {@link AwaitInterruptedException#getInterrupted()}.<br/>
+	 * If {@code continueOnInterrupt} is {@code false}, then an {@link AwaitInterruptedException} is
+	 * thrown immediately and the remaining {@link Entry Entries} will be available via
+	 * {@link AwaitInterruptedException#getUnexecuted()}.<br/>
+	 * If {@code continueOnInterrupt} is {@code true}, then the remaining operations will still be
+	 * performed given {@code 1} nanosecond timeout each and also the current {@link Thread} will be
+	 * marked as {@link Thread#interrupt() interrupted} before performing each one.</p>
+	 * <p>
 	 * If {@code timeout} argument is {@code 0}, then all operations will receive {@code 0} timeout.
 	 * Note that different methods may interpret it in different ways: <i>"return false if cannot
 	 * complete operation immediately"</i> like
@@ -185,21 +196,23 @@ public interface Awaitable {
 	) throws AwaitInterruptedException {
 		var remainingNanos =  unit.toNanos(timeout);
 		final var deadlineNanos = System.nanoTime() + remainingNanos;
+		final var currentThread = Thread.currentThread();
 		final var failedTasks = new LinkedList<T>();
 		final var interruptedTasks = new LinkedList<T>();
 		boolean interrupted = false;
 		while (awaitableEntries.hasNext()) {
 			final var awaitableEntry = awaitableEntries.next();
+			if (interrupted) currentThread.interrupt();  // ensure no blocking by operation
+			if (remainingNanos > 1L) {
+				remainingNanos = deadlineNanos - System.nanoTime();
+				if (remainingNanos < 1L) remainingNanos = 1L;
+			}
 			try {
 				if (
 					!awaitableEntry.operation.toAwaitableWithUnit()
 							.await(remainingNanos, NANOSECONDS)
 				) {
 					failedTasks.add(awaitableEntry.object);
-				}
-				if (remainingNanos > 1L) {
-					remainingNanos = deadlineNanos - System.nanoTime();
-					if (remainingNanos < 1L) remainingNanos = 1L;
 				}
 			} catch (InterruptedException e) {
 				interruptedTasks.add(awaitableEntry.object);
@@ -212,6 +225,7 @@ public interface Awaitable {
 			}
 		}
 		if (interrupted) {
+			final var ignored = Thread.interrupted();
 			throw new AwaitInterruptedException(failedTasks, interruptedTasks, awaitableEntries);
 		}
 		return failedTasks;

@@ -82,44 +82,46 @@ public class AwaitableTests {
 		final long FIRST_TASK_MILLIS = 100L;
 		final long SECOND_TASK_MILLIS = 150L;
 		final long TOTAL_TIMEOUT_MILLIS = FIRST_TASK_MILLIS + SECOND_TASK_MILLIS + 30L;
-		final String INACCURACY_MESSAGE = "timeout adjustment inaccuracy should be below "
+		final String INACCURACY_MESSAGE = "timeout adjustment inaccuracy exceeded "
 				+ MAX_INACCURACY_MILLIS + "ms (this may fail due to CPU usage spikes by other "
-				+ "processes, so try to rerun few times, but if the failure persists it probably "
+				+ "processes, so try to rerun a few times, but if the failure persists it probably "
 				+ "means a bug)";
 
 		assertTrue("all tasks should be marked as completed", Awaitable.awaitMultiple(
 			TOTAL_TIMEOUT_MILLIS,
 			MILLISECONDS,
 			(timeout, unit) -> {
-				assertEquals("1st task should get the full timeout",
-						TOTAL_TIMEOUT_MILLIS, unit.toMillis(timeout));
-				Thread.sleep(FIRST_TASK_MILLIS);
+				final var timeoutMillis = unit.toMillis(timeout);
+				final var inaccuracyMillis = TOTAL_TIMEOUT_MILLIS - timeoutMillis;
+				assertTrue(
+					"1st task should get at least TOTAL_TIMEOUT_MILLIS - MAX_INACCURACY_MILLIS",
+					inaccuracyMillis <= MAX_INACCURACY_MILLIS
+				);
+				Thread.sleep(FIRST_TASK_MILLIS - inaccuracyMillis);
 				return true;
 			},
 			(timeout, unit) -> {
 				final var timeoutMillis = unit.toMillis(timeout);
-				assertTrue("timeouts of subsequent tasks should be correctly adjusted",
+				final var inaccuracyMillis =
+						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - timeoutMillis;
+				assertTrue("timeouts of subsequent tasks should be adjusted",
 						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS >= timeoutMillis);
 				assertTrue(INACCURACY_MESSAGE,
-						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - timeoutMillis
-								<= MAX_INACCURACY_MILLIS
+						inaccuracyMillis <= MAX_INACCURACY_MILLIS
 				);
-				Thread.sleep(SECOND_TASK_MILLIS);
+				Thread.sleep(SECOND_TASK_MILLIS - inaccuracyMillis);
 				return true;
 			},
 			(timeout, unit) -> {
 				final var timeoutMillis = unit.toMillis(timeout);
-				assertTrue(
-					"timeouts of subsequent tasks should be correctly adjusted",
-					TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - SECOND_TASK_MILLIS
-								>= timeoutMillis
-				);
-				assertTrue(
-					INACCURACY_MESSAGE,
-					TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - SECOND_TASK_MILLIS - timeoutMillis
-							<= 2 * MAX_INACCURACY_MILLIS
-				);
-				Thread.sleep(unit.toMillis(timeout) + MAX_INACCURACY_MILLIS);
+				final var inaccuracyMillis = TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS
+						- SECOND_TASK_MILLIS - timeoutMillis;
+				assertTrue("timeouts of subsequent tasks should be adjusted",
+						TOTAL_TIMEOUT_MILLIS - FIRST_TASK_MILLIS - SECOND_TASK_MILLIS
+								>= timeoutMillis);
+				assertTrue(INACCURACY_MESSAGE,
+						inaccuracyMillis <= MAX_INACCURACY_MILLIS);
+				Thread.sleep(timeoutMillis + MAX_INACCURACY_MILLIS);
 				return true;
 			},
 			(timeout, unit) -> {
@@ -168,8 +170,11 @@ public class AwaitableTests {
 							0,
 							(timeoutMillis) -> {
 								taskExecuted[0] = true;
-								assertEquals("task-0 should get the full timeout",
-										totalTimeoutMillis, timeoutMillis);
+								assertTrue(
+									"task-0 should get at least "
+											+ "totalTimeoutMillis - MAX_INACCURACY_MILLIS",
+									timeoutMillis >= totalTimeoutMillis - MAX_INACCURACY_MILLIS
+								);
 								return true;
 							}
 						),
@@ -179,7 +184,7 @@ public class AwaitableTests {
 								taskExecuted[1] = true;
 								task1Started.countDown();
 								task1BlockingLatch.await(200L, MILLISECONDS);
-								fail("InterruptedException should be thrown");
+								fail("interrupt expected");
 								return true;
 							}
 						),
@@ -189,6 +194,9 @@ public class AwaitableTests {
 								taskExecuted[2] = true;
 								assertEquals("after an interrupt tasks should get 1ms timeout",
 										1L, timeoutMillis);
+								Thread.sleep(1L);
+								fail("after an interrupt the Thread should be marked interrupted "
+										+ "for each subsequent task");
 								return true;
 							}
 						),
@@ -208,14 +216,21 @@ public class AwaitableTests {
 					final var interrupted = e.getInterrupted();
 					assertEquals("1 task should fail",
 							1, failed.size());
-					assertEquals("1 task should be interrupted",
-							1, interrupted.size());
+					assertEquals("2 tasks should be interrupted",
+							2, interrupted.size());
 					assertFalse("all tasks should be executed",
 							e.getUnexecuted().hasNext());
-					assertEquals("task-1 should be interrupted",
-							1, interrupted.get(0));
+					assertTrue("task-1 should be interrupted",
+							interrupted.contains(1));
+					assertTrue("task-2 should be interrupted",
+							interrupted.contains(2));
 					assertEquals("task-3 should fail",
 							3, failed.get(0));
+					assertFalse(
+						"upon throwing an AwaitInterruptedException interrupted flag should be"
+								+ " cleared",
+						Thread.interrupted()
+					);
 				}
 				for (int i = 0; i < taskExecuted.length; i++) {
 					assertTrue("task-" + i + " should be executed",
@@ -227,12 +242,15 @@ public class AwaitableTests {
 		});
 
 		awaitingThread.start();
-		assertTrue("task-1 should start",
-				task1Started.await(100L, MILLISECONDS));
+		if ( !task1Started.await(100L, MILLISECONDS)) {
+			if (asyncError != null)  throw asyncError;
+			fail("task-1 should start");
+		}
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
-		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
 		if (asyncError != null)  throw asyncError;
+		assertFalse("awaitingThread should terminate",
+				awaitingThread.isAlive());
 	}
 
 	@Test
@@ -256,15 +274,16 @@ public class AwaitableTests {
 		final Awaitable.WithUnit[] tasks = {
 			(timeout, unit) -> {
 				taskExecuted[0] = true;
-				assertEquals("task-0 should get the full timeout",
-						TOTAL_TIMEOUT_MILLIS, unit.toMillis(timeout));
+				assertTrue(
+					"task-0 should get at least TOTAL_TIMEOUT_MILLIS - MAX_INACCURACY_MILLIS",
+					unit.toMillis(timeout) >= TOTAL_TIMEOUT_MILLIS - MAX_INACCURACY_MILLIS);
 				return true;
 			},
 			(timeout, unit) -> {
 				taskExecuted[1] = true;
 				task1Started.countDown();
 				task1BlockingLatch.await(timeout, unit);
-				fail("InterruptedException should be thrown");
+				fail("interrupt expected");
 				return true;
 			},
 			(timeout, unit) -> {
@@ -305,6 +324,11 @@ public class AwaitableTests {
 					}
 					assertFalse("the last task should NOT be executed",
 							taskExecuted[taskExecuted.length - 1]);
+					assertFalse(
+						"upon throwing an AwaitInterruptedException interrupted flag should be"
+								+ " cleared",
+						Thread.interrupted()
+					);
 				}
 			} catch (AssertionError e) {
 				asyncError = e;
@@ -312,12 +336,15 @@ public class AwaitableTests {
 		});
 
 		awaitingThread.start();
-		assertTrue("task-1 should start",
-				task1Started.await(100L, MILLISECONDS));
+		if ( !task1Started.await(100L, MILLISECONDS)) {
+			if (asyncError != null)  throw asyncError;
+			fail("task-1 should start");
+		}
 		awaitingThread.interrupt();
 		awaitingThread.join(100L);
-		if (awaitingThread.isAlive()) fail("awaitingThread should terminate");
 		if (asyncError != null)  throw asyncError;
+		assertFalse("awaitingThread should terminate",
+				awaitingThread.isAlive());
 	}
 
 
