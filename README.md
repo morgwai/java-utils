@@ -6,6 +6,8 @@ Copyright 2021 Piotr Morgwai Kotarbinski, Licensed under the Apache License, Ver
 **latest release: [5.1](https://search.maven.org/artifact/pl.morgwai.base/java-utils/5.1/jar)**
 ([javadoc](https://javadoc.io/doc/pl.morgwai.base/java-utils/5.1))
 
+See [CHANGES](CHANGES.md) for the summary of changes between releases. If the major version of a subsequent release remains unchanged, it is supposed to be backwards compatible in terms of API and behaviour with previous ones with the same major version (meaning that it should be safe to just blindly update in dependent projects and things should not break under normal circumstances).
+
 **Note:** from version 2.0, `java.util.logging` utilities have been moved to a separate [repo](https://github.com/morgwai/jul-utils).
 
 ## MAIN USER CLASSES
