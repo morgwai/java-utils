@@ -52,17 +52,11 @@ public class CallableTaskExecution<T> extends CompletableFuture<T> implements Ru
 	/**
 	 * Similar to {@link CompletableFuture#supplyAsync(Supplier, Executor)}, but takes a
 	 * {@link Callable} argument.
-	 * If {@link Callable#call() task.call()} throws, the {@link Throwable} will be passed to
-	 * {@link #completeExceptionally(Throwable)} directly (without wrapping with a
-	 * {@link CompletionException} unlike
-	 * {@link CompletableFuture#supplyAsync(Supplier, Executor) supplyAsync(...)} does with
-	 * {@link RuntimeException}s).
-	 * <p>
-	 * Internally {@code task} is wrapped with a {@link CallableTaskExecution}, so in case
-	 * {@code executor}
-	 * {@link RejectedExecutionHandler#rejectedExecution(Runnable, ThreadPoolExecutor) rejects}
-	 * {@code task} or {@link ExecutorService#shutdownNow() executor.shutdownNow()} is called,
-	 * {@link CallableTaskExecution#getTask()} may be used to obtain the original.</p>
+	 * If {@link Callable#call() task.call()} throws, the {@link Throwable} will be passed directly
+	 * to {@link #completeExceptionally(Throwable)}. This is somewhat different than
+	 * {@link CompletableFuture#supplyAsync(Supplier, Executor) supplyAsync(...)} which wraps any
+	 * thrown {@link RuntimeException}s with {@link CompletionException}s first.
+	 * @return a new {@link CallableTaskExecution} wrapping {@code task}.
 	 */
 	public static <R> CallableTaskExecution<R> callAsync(Callable<R> task, Executor executor) {
 		final var taskExecution = new CallableTaskExecution<>(task);

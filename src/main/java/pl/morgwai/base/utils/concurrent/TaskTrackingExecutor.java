@@ -25,8 +25,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 	 * Returns a {@code List} of tasks currently being run by the worker {@code Threads}.
 	 * Unless stated otherwise by an implementing class, the result may be a subject to all kind of
 	 * races and thus may sometimes not even be fully consistent with any point in the past. This
-	 * method is intended for spotting long-running or stuck tasks or for general overview of types
-	 * of tasks being executed.
+	 * method is intended for spotting long-running or stuck tasks or for a general overview of
+	 * types of tasks being executed.
 	 */
 	List<Runnable> getRunningTasks();
 

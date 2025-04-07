@@ -8,8 +8,8 @@ import java.util.function.IntFunction;
 
 
 /**
- * {@link ThreadFactory} that names new {@link Thread}s based on a constructor supplied
- * generator/name.
+ * {@link ThreadFactory} that {@link Thread#getName() names} new {@link Thread}s based on a
+ * constructor supplied generator/name.
  * Each instance is associated with a {@link ThreadGroup} which newly created {@link Thread}s will
  * belong to.
  */
@@ -24,21 +24,23 @@ public class NamingThreadFactory implements ThreadFactory {
 
 
 	/**
-	 * Constructs a {@code ThreadFactory} that will create non-daemon {@link Thread}s with
-	 * {@link Thread#NORM_PRIORITY} and names constructed using scheme
-	 * {@code <name>-thread-<sequenceNumber>}.
-	 * Created {@link Thread}s will belong to a newly created {@link ThreadGroup} named {@code name}
-	 * associated with this {@code ThreadFactory}.
+	 * Constructs a {@link ThreadFactory} of {@link Thread#isDaemon() non-daemon} {@link Thread}s
+	 * with {@link Thread#NORM_PRIORITY NORM_PRIORITY} and {@link Thread#getName() named}
+	 * {@code name +} {@value THREAD_NAME_INFIX} {@code + sequenceNumber}.
+	 * Created {@link Thread}s will belong to a newly created {@link ThreadGroup}
+	 * {@link ThreadGroup#getName() named} {@code name} associated with this {@link ThreadFactory}.
 	 */
 	public NamingThreadFactory(String name) {
-		this(createThreadGroup(name), (i) -> name + "-thread-" + i);
+		this(createThreadGroup(name), (i) -> name + THREAD_NAME_INFIX + i);
 	}
+
+	static final String THREAD_NAME_INFIX = "-thread-";
 
 	static ThreadGroup createThreadGroup(String name) {
 		final var securityManager = System.getSecurityManager();
 		final var parentGroup = securityManager != null
-				? securityManager.getThreadGroup()
-				: Thread.currentThread().getThreadGroup();
+			? securityManager.getThreadGroup()
+			: Thread.currentThread().getThreadGroup();
 		final var newGroup = new ThreadGroup(parentGroup, name);
 		newGroup.setMaxPriority(Thread.NORM_PRIORITY);
 		newGroup.setDaemon(false);
@@ -48,10 +50,11 @@ public class NamingThreadFactory implements ThreadFactory {
 
 
 	/**
-	 * Constructs a {@code ThreadFactory} that will create {@link Thread}s belonging to
-	 * {@code threadGroup} with names constructed using {@code threadNameGenerator}.
-	 * Created {@link Thread}s will derive priority from
-	 * {@link ThreadGroup#getMaxPriority() threadGroup.getMaxPriority()} and daemon status from
+	 * Constructs a {@link ThreadFactory} of {@link Thread}s belonging to {@code threadGroup} with
+	 * {@link Thread#getName() names} constructed using {@code threadNameGenerator}.
+	 * Created {@link Thread}s will derive {@link Thread#getPriority() priority} from
+	 * {@link ThreadGroup#getMaxPriority() threadGroup.getMaxPriority()} and
+	 * {@link Thread#isDaemon() daemon status} from
 	 * {@link ThreadGroup#isDaemon() threadGroup.isDaemon()}.
 	 */
 	public NamingThreadFactory(ThreadGroup threadGroup, IntFunction<String> threadNameGenerator) {

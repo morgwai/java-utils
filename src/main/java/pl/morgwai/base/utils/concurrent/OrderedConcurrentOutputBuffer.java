@@ -95,15 +95,12 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 	 * @throws IllegalStateException if {@link #signalNoMoreBuckets()} has already been called.
 	 */
 	public OutputStream<MessageT> addBucket() {
-		// The below synchronization does not guarantee thread-safety: if 2 Threads that call
-		// addBucket() synchronize on the same tailGuard, they will branch the queue into 2.
+		// The below synchronization does not guarantee thread-safety: even if 2 Threads that call
+		// addBucket() synchronize on the same tailGuard, they will branch the queue into 2 anyway.
 		// Synchronization here is for memory consistency with Threads that may be trying to flush
 		// the tailGuard at the same time.
 		synchronized (tailGuard.lock) {
-			if (noMoreBuckets) {
-				throw new IllegalStateException("noMoreBuckets already signaled");
-			}
-
+			if (noMoreBuckets) throw new IllegalStateException("noMoreBuckets already signaled");
 			// return the current tailGuard after adding a new one after it
 			final var newRealTail = tailGuard;
 			tailGuard = new Bucket();
@@ -121,9 +118,9 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 	 * all the existing {@code Bucket}s are {@link OutputStream#close() closed}, the underlying
 	 * output stream will be closed automatically.
 	 * <p>
-	 * This method may be may be called concurrently with any existing {@code Bucket} methods
-	 * without an additional synchronization. However invocations concurrent with
-	 * {@link #addBucket()} must be properly synchronized.</p>
+	 * This method may be called concurrently with any existing {@code Bucket} methods without an
+	 * additional synchronization. However invocations concurrent with {@link #addBucket()} must be
+	 * properly synchronized.</p>
 	 */
 	public void signalNoMoreBuckets() {
 		synchronized (tailGuard.lock) {
@@ -136,8 +133,8 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 	/**
-	 * A list of messages with a fixed position relatively to other {@code Bucket}s of the enclosing
-	 * {@code OrderedConcurrentOutputBuffer}.<br/>
+	 * {@code List} of messages with a fixed position relatively to other {@code Bucket}s of the
+	 * enclosing {@code OrderedConcurrentOutputBuffer}.<br/>
 	 * All methods are thread-safe.
 	 * @see #addBucket()
 	 */
@@ -148,11 +145,11 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 		/**
 		 * Switched in {@link #close()}.<br/>
-		 * ({@link #buffer} == null && !closed) <=> this is the head (the first unclosed one)
+		 * ({@link #buffer} == null && ! closed) <=> this is the head (the first unclosed one)
 		 */
 		boolean closed = false;
 
-		/** null <=> this {@code Bucket} is the current {@link #tailGuard}. */
+		/** (next == null) <=> (this == {@link #tailGuard}) */
 		Bucket next;
 
 		/** All {@code Bucket} methods are synchronized on this lock. */
@@ -161,10 +158,11 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 		/**
-		 * Appends {@code message} to the end of this {@code Bucket}. If this is the head (the first
-		 * unclosed one), then {@code message} will be written directly to {@link #output the
-		 * underlying output stream}. Otherwise it will be buffered in {@link #buffer} until all
-		 * the previous {@code Bucket} are {@link #close() closed} (and {@link #flush() flushed}).
+		 * Appends {@code message} to the end of {@code this Bucket}. If {@code this Bucket} is the
+		 * head (the first {@link #closed unclosed} one), then {@code message} will be written
+		 * directly to  the underlying {@link #output} stream. Otherwise it will be stored in
+		 * {@link #buffer} until all the previous {@code Bucket}s are {@link #close() closed}
+		 * (and {@link #flush() flushed}).
 		 */
 		@Override
 		public void write(MessageT message) {
@@ -181,17 +179,17 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 		/**
-		 * Marks this {@code Bucket} as {@link #closed}. If this {@code Bucket} is the head one (the
-		 * first unclosed one), then all the subsequent closed {@code Bucket}s and the first
+		 * Marks {@code this Bucket} as {@link #closed}. If {@code this Bucket} was the head one
+		 * (the first unclosed one), then all the subsequent closed {@code Bucket}s and the first
 		 * unclosed one are {@link #flush() flushed}.
 		 * <p>
-		 * The first unclosed {@code Bucket} becomes the new head and its messages will be
-		 * {@link OutputStream#write(Object) written} directly to
-		 * {@link #output the underlying output stream} from now on.</p>
+		 * The new first unclosed {@code Bucket} becomes the new head and its messages will be
+		 * {@link OutputStream#write(Object) written} directly to the underlying
+		 * {@link #output} stream from now on.</p>
 		 * <p>
-		 * If all the {@code Bucket}s are closed (and flushed) and {@link #signalNoMoreBuckets()}
-		 * has already been called, then {@link #output the underlying output stream} will be
-		 * {@link OutputStream#close() closed}.</p>
+		 * If all the {@code Bucket}s are {@link #closed} (and thus also {@link #flush() flushed})
+		 * and {@link #signalNoMoreBuckets()} has already been called, then the underlying
+		 * {@link #output} stream will be {@link OutputStream#close() closed}.</p>
 		 */
 		@Override
 		public void close() {
@@ -206,14 +204,13 @@ public class OrderedConcurrentOutputBuffer<MessageT> {
 
 
 		/**
-		 * {@link OutputStream#write(Object) Writes} all messages in this {@code Bucket} to
-		 * {@link #output the underlying output stream}. If this {@code Bucket} is already
-		 * {@link #closed}, then recursively flushes {@link #next the next Bucket}.
+		 * {@link OutputStream#write(Object) Writes} all messages in {@code this Bucket} to
+		 * the underlying {@link #output} stream. If {@code this Bucket} is already {@link #closed},
+		 * then "recursively" flushes the {@link #next} {@code Bucket}.
 		 * <p>
-		 * If there is no next {@code Bucket} (meaning this is {@link #tailGuard}) and
-		 * {@link #signalNoMoreBuckets()} has already been called, then
-		 * {@link #output the underlying output stream} will be {@link OutputStream#close() closed}.
-		 * </p>
+		 * If there is no {@link #next} {@code Bucket} (meaning {@code this == }{@link #tailGuard})
+		 * and {@link #signalNoMoreBuckets()} has already been called, then the underlying
+		 * {@link #output} stream will be {@link OutputStream#close() closed}.</p>
 		 * <p>
 		 * Flushing of each {@code Bucket} is synchronized only on its own {@link #lock}, so any
 		 * operations on subsequent {@code Bucket}s performed by other {@code Threads} are not

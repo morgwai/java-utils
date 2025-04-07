@@ -14,9 +14,9 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 
 /**
- * An object performing {@link #await(long) timed blocking operation}, such as
- * {@link Thread#join(long)}, {@link Object#wait(long)},
- * {@link ExecutorService#awaitTermination(long, TimeUnit)} etc.
+ * Closure {@link #await(long) awaiting} completion of a timed blocking operation, such as
+ * {@link Thread#join(long)},
+ * {@link ExecutorService#awaitTermination(long, TimeUnit) Executor.awaitTermination(...)} etc.
  * Useful for awaiting for multiple such operations within a joint timeout: see
  * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...) function family}.
  */
@@ -26,8 +26,7 @@ public interface Awaitable {
 
 
 	/**
-	 * A timed blocking operation, such as {@link Thread#join(long)}, {@link Object#wait(long)},
-	 * {@link ExecutorService#awaitTermination(long, TimeUnit)} etc.
+	 * Awaits completion of a timed blocking operation.
 	 * @return {@code true} if operation succeeds before {@code timeoutMillis} passes, {@code false}
 	 *     otherwise.
 	 */
@@ -36,7 +35,7 @@ public interface Awaitable {
 
 
 	/**
-	 * Adapts this {@code Awaitable} to {@link Awaitable.WithUnit}.
+	 * Converts this {@code Awaitable} to {@link Awaitable.WithUnit}.
 	 * <p>
 	 * Timeout supplied to {@link Awaitable.WithUnit#await(long, TimeUnit)} is converted to millis
 	 * using {@link TimeUnit#convert(long, TimeUnit)}, except when it is smaller than 1ms yet
@@ -55,6 +54,7 @@ public interface Awaitable {
 		/** A version of {@link #await(long)} method with additional {@link TimeUnit} param. */
 		boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
+		/** Calls {@link #await(long, TimeUnit) await(timeout.toNanos(), TimeUnit.NANOSECONDS)}. */
 		default boolean await(Duration timeout) throws InterruptedException {
 			return await(timeout.toNanos(), NANOSECONDS);
 		}
@@ -76,12 +76,12 @@ public interface Awaitable {
 
 	/**
 	 * Creates an {@link Awaitable.WithUnit} of {@link Thread#join(long, int) joining a thread}.
-	 * The result is based on {@link Thread#isAlive()}. If {@code 0} is passed as {@code timeout},
-	 * the operation will wait forever for {@code thread} to finish, similarly to the semantics of
-	 * {@link Thread#join(long) join(0)} (note that non of the
-	 * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} methods will ever pass {@code 0} to
-	 * any of its operations as a result of real time flow, except if {@code 0} was originally
-	 * passed as joint {@code timeout}).
+	 * If {@code 0} is passed as {@code timeout}, the operation will wait forever for {@code thread}
+	 * to finish, similarly to the semantics of {@link Thread#join(long) join(0)} (note that non of
+	 * the {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} methods will ever pass
+	 * {@code 0} to any of its operations as a result of real time flow, except if {@code 0} was
+	 * originally passed as joint {@code timeout}).
+	 * @return {@code !}{@link Thread#isAlive()}.
 	 */
 	static Awaitable.WithUnit ofJoin(Thread thread) {
 		return (timeout, unit) -> {
@@ -100,6 +100,10 @@ public interface Awaitable {
 	/**
 	 * Creates an {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}.
+	 * {@link ExecutorService#shutdown()} should usually be called before the resulting
+	 * {@code Awaitable} is passed to {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} for
+	 * the actual shutdown sequence to be performed in parallel with other {@code Awaitable}
+	 * operations.
 	 */
 	static Awaitable.WithUnit ofTermination(ExecutorService executor) {
 		return (timeout, unit) -> {
@@ -113,8 +117,11 @@ public interface Awaitable {
 	/**
 	 * Creates an {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}, if
-	 * {@code executor} fails to terminate, {@link ExecutorService#shutdownNow() shutdownNow()} is
-	 * called {@code finally}.
+	 * it fails, calls {@link ExecutorService#shutdownNow() shutdownNow()}.
+	 * {@link ExecutorService#shutdown()} should usually be called before the resulting
+	 * {@code Awaitable} is passed to {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} for
+	 * the actual shutdown sequence to be performed in parallel with other {@code Awaitable}
+	 * operations.
 	 * @return the result of
 	 *     {@link ExecutorService#awaitTermination(long, TimeUnit) executor.awaitTermination(...)}.
 	 */
@@ -132,17 +139,17 @@ public interface Awaitable {
 
 
 	/**
-	 * Awaits for multiple {@link Awaitable timed blocking operations} specified by
-	 * {@code awaitableEntries}.
-	 * Each {@link Entry Entry} maps an {@link Entry#getObject() object} on which an operation
-	 * should be performed (for example a {@link Thread} to be {@link Thread#join(long) joined} or
-	 * an {@link ExecutorService Executor} to be
-	 * {@link ExecutorService#awaitTermination(long, TimeUnit) terminated}) to a
-	 * {@link Entry#getOperation() closure performing this operation}.
+	 * {@link #await(long) Awaits} up to {@code timeout} for all
+	 * {@link Entry#getOperation() operations} of {@code awaitableEntries} to complete.
+	 * The operations should be initiated before passing them to this function, so that they can all
+	 * run in the background: for example in case of
+	 * {@link ExecutorService#awaitTermination(long, TimeUnit) awaiting termination} of a bunch of
+	 * {@link ExecutorService Executors}, {@link ExecutorService#shutdown() shutdown()} should be
+	 * called on each of them before passing them to this function.
 	 * <p>
 	 * If {@code timeout} passes before all operations are completed, the remaining ones will still
-	 * be performed given {@code 1} nanosecond timeout each. This allows any operations that have
-	 * already been completed in parallel, to report their successful status.</p>
+	 * be awaited for and given {@code 1} nanosecond timeout each. This allows any operations that
+	 * have already been completed in the background, to report their successful status.</p>
 	 * <p>
 	 * If any of the operations throws an {@link InterruptedException}, then an
 	 * {@link AwaitInterruptedException} will be eventually thrown by this method and all the
@@ -152,8 +159,10 @@ public interface Awaitable {
 	 * thrown immediately and the remaining {@link Entry Entries} will be available via
 	 * {@link AwaitInterruptedException#getUnexecuted()}.<br/>
 	 * If {@code continueOnInterrupt} is {@code true}, then the remaining operations will still be
-	 * performed given {@code 1} nanosecond timeout each and also the current {@link Thread} will be
-	 * marked as {@link Thread#interrupt() interrupted} before performing each one.</p>
+	 * awaited for and given {@code 1} nanosecond timeout each and also the current {@link Thread}
+	 * will be marked as {@link Thread#interrupt() interrupted} before performing each one to avoid
+	 * any further blocking and just collect statuses of those that have already been completed in
+	 * the background before the interrupt.</p>
 	 * <p>
 	 * If {@code timeout} argument is {@code 0}, then all operations will receive {@code 0} timeout.
 	 * Note that different methods may interpret it in different ways: <i>"return false if cannot
@@ -162,8 +171,7 @@ public interface Awaitable {
 	 * operation is completed"</i> like {@link Thread#join(long)}.</p>
 	 * <p>
 	 * Note: internally all time measurements are performed in nanoseconds, hence this function is
-	 * not suitable for timeouts spanning several decades (not that it would make much sense, but
-	 * I'm just sayin...&nbsp;;-)&nbsp;&nbsp;).</p>
+	 * not suitable for timeouts spanning longer than {@link Long#MAX_VALUE} of nanoseconds.</p>
 	 * <p>
 	 * Note: this is a "low-level" core version: there are several "frontend" functions defined in
 	 * this class with more convenient API divided into 3 families:</p>
@@ -234,9 +242,9 @@ public interface Awaitable {
 
 
 	/**
-	 * Maps {@link #getObject() object} to an {@link #getOperation() Awaitable operation} that one
-	 * of {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...)}
-	 * functions will perform.
+	 * Maps an {@link #getObject() object} to an {@link #getOperation() Awaitable operation} that
+	 * one of {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...)}
+	 * functions will {@link #await(long) await} for.
 	 */
 	class Entry<T> {
 
@@ -258,7 +266,7 @@ public interface Awaitable {
 
 
 
-	/** Saves few chars when {@link Stream#map(Function) mapping streams} to {@link Entry}s. */
+	/** Saves a few chars when {@link Stream#map(Function) mapping streams} to {@link Entry}s. */
 	static <T> Function<T, Entry<T>> entryMapper(Function<? super T, ? extends Awaitable> adapter) {
 		return (t) -> newEntry(t, adapter.apply(t));
 	}
