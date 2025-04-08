@@ -59,7 +59,7 @@ public class AwaitableTests {
 		tasksToFail.add(14);
 		assertTrue("test data integrity check", tasksToFail.last() < NUMBER_OF_TASKS);
 
-		final List<Integer> failed = Awaitable.awaitMultiple(
+		final List<Integer> failed = Awaitable.awaitAll(
 			5L, DAYS,
 			IntStream.range(0, 20)
 				.boxed()
@@ -87,7 +87,7 @@ public class AwaitableTests {
 				+ "processes, so try to rerun a few times, but if the failure persists it probably "
 				+ "means a bug)";
 
-		assertTrue("all tasks should be marked as completed", Awaitable.awaitMultiple(
+		assertTrue("all tasks should be marked as completed", Awaitable.awaitAll(
 			TOTAL_TIMEOUT_MILLIS,
 			MILLISECONDS,
 			(timeout, unit) -> {
@@ -136,7 +136,7 @@ public class AwaitableTests {
 
 	@Test
 	public void testZeroTimeout() throws InterruptedException {
-		final var allCompleted = Awaitable.awaitMultiple(
+		final var allCompleted = Awaitable.awaitAll(
 			0L,
 			(timeout) -> {
 				assertEquals("there should be no timeout",
@@ -163,7 +163,7 @@ public class AwaitableTests {
 		final var awaitingThread = new Thread(() -> {
 			try {
 				try {
-					Awaitable.awaitMultiple(
+					Awaitable.awaitAll(
 						totalTimeoutMillis,
 						MILLISECONDS,
 						Awaitable.newEntry(
@@ -295,7 +295,7 @@ public class AwaitableTests {
 		final var awaitingThread = new Thread(() -> {
 			try {
 				try {
-					Awaitable.awaitMultiple(
+					Awaitable.awaitAll(
 						TOTAL_TIMEOUT_MILLIS,
 						false,
 						IntStream.range(0, tasks.length)
@@ -463,7 +463,7 @@ public class AwaitableTests {
 
 		assertTrue("all threads should start",  // sometimes threads start slowly...
 				allThreadsStarted.await(100L, MILLISECONDS));
-		final var failed = Awaitable.awaitMultiple(
+		final var failed = Awaitable.awaitAll(
 			EXECUTION_DELAY_MILLIS + 20L,
 			Arrays.stream(threads).map(Awaitable.entryMapper(Awaitable::ofJoin))
 		);

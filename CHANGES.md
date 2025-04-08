@@ -1,6 +1,7 @@
 # Summaries of visible changes between releases
 
 ### 5.3
+- `Awaitable`: rename `awaitMultiple(...)` to `awaitAll(...)` (provide backward-compatibility aliases).
 - make some `final` also `public` in `Awaitable.Entry` and `TaskTrackingExecutor.TaskTrackingExecutorDecorator.HookableExecutor`.
 
 ### 5.2

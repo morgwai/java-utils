@@ -18,7 +18,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * {@link Thread#join(long)},
  * {@link ExecutorService#awaitTermination(long, TimeUnit) Executor.awaitTermination(...)} etc.
  * Useful for awaiting for multiple such operations within a joint timeout: see
- * {@link #awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...) function family}.
+ * {@link #awaitAll(long, TimeUnit, boolean, Iterator) awaitMultiple(...) function family}.
  */
 @FunctionalInterface
 public interface Awaitable {
@@ -78,7 +78,7 @@ public interface Awaitable {
 	 * Creates an {@link Awaitable.WithUnit} of {@link Thread#join(long, int) joining a thread}.
 	 * If {@code 0} is passed as {@code timeout}, the operation will wait forever for {@code thread}
 	 * to finish, similarly to the semantics of {@link Thread#join(long) join(0)} (note that non of
-	 * the {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} methods will ever pass
+	 * the {@link #awaitAll(long, TimeUnit, boolean, Iterator)} methods will ever pass
 	 * {@code 0} to any of its operations as a result of real time flow, except if {@code 0} was
 	 * originally passed as joint {@code timeout}).
 	 * @return {@code !}{@link Thread#isAlive()}.
@@ -101,7 +101,7 @@ public interface Awaitable {
 	 * Creates an {@link Awaitable.WithUnit} of {@link ExecutorService#shutdown() shutdown} and
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}.
 	 * {@link ExecutorService#shutdown()} should usually be called before the resulting
-	 * {@code Awaitable} is passed to {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} for
+	 * {@code Awaitable} is passed to {@link #awaitAll(long, TimeUnit, boolean, Iterator)} for
 	 * the actual shutdown sequence to be performed in parallel with other {@code Awaitable}
 	 * operations.
 	 */
@@ -119,7 +119,7 @@ public interface Awaitable {
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) termination} of {@code executor}, if
 	 * it fails, calls {@link ExecutorService#shutdownNow() shutdownNow()}.
 	 * {@link ExecutorService#shutdown()} should usually be called before the resulting
-	 * {@code Awaitable} is passed to {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)} for
+	 * {@code Awaitable} is passed to {@link #awaitAll(long, TimeUnit, boolean, Iterator)} for
 	 * the actual shutdown sequence to be performed in parallel with other {@code Awaitable}
 	 * operations.
 	 * @return the result of
@@ -196,7 +196,7 @@ public interface Awaitable {
 	 * @throws AwaitInterruptedException if any of the operations throws an
 	 *     {@link InterruptedException}.
 	 */
-	static <T> List<T> awaitMultiple(
+	static <T> List<T> awaitAll(
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
@@ -243,8 +243,8 @@ public interface Awaitable {
 
 	/**
 	 * Maps an {@link #object object} to an {@link #operation Awaitable operation} that
-	 * one of {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...)}
-	 * functions will {@link #await(long) await} for.
+	 * {@link Awaitable#awaitAll(long, TimeUnit, boolean, Iterator)} function will
+	 * {@link #await(long) await} for.
 	 */
 	class Entry<T> {
 
@@ -276,7 +276,7 @@ public interface Awaitable {
 	/**
 	 * {@link InterruptedException} that contains results of {@link Awaitable Awaitable operations}
 	 * passed to a
-	 * {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultipe(...)} call
+	 * {@link Awaitable#awaitAll(long, TimeUnit, boolean, Iterator) awaitMultipe(...)} call
 	 * that was later interrupted.
 	 */
 	class AwaitInterruptedException extends InterruptedException {
@@ -305,15 +305,15 @@ public interface Awaitable {
 
 
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
 	@SafeVarargs
-	static <T> List<T> awaitMultiple(
+	static <T> List<T> awaitAll(
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
 		Entry<T>... awaitableEntries
 	) throws AwaitInterruptedException {
-		return awaitMultiple(
+		return awaitAll(
 			timeout,
 			unit,
 			continueOnInterrupt,
@@ -321,14 +321,14 @@ public interface Awaitable {
 		);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
 	@SafeVarargs
-	static <T> List<T> awaitMultiple(
+	static <T> List<T> awaitAll(
 		long timeoutMillis,
 		boolean continueOnInterrupt,
 		Entry<T>... awaitableEntries
 	) throws AwaitInterruptedException {
-		return awaitMultiple(
+		return awaitAll(
 			timeoutMillis,
 			MILLISECONDS,
 			continueOnInterrupt,
@@ -336,18 +336,18 @@ public interface Awaitable {
 		);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
 	@SafeVarargs
-	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Entry<T>... awaitableEntries)
+	static <T> List<T> awaitAll(long timeout, TimeUnit unit, Entry<T>... awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, true, Arrays.asList(awaitableEntries).iterator());
+		return awaitAll(timeout, unit, true, Arrays.asList(awaitableEntries).iterator());
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
 	@SafeVarargs
-	static <T> List<T> awaitMultiple(long timeoutMillis, Entry<T>... awaitableEntries)
+	static <T> List<T> awaitAll(long timeoutMillis, Entry<T>... awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(
+		return awaitAll(
 			timeoutMillis,
 			MILLISECONDS,
 			true,
@@ -357,23 +357,23 @@ public interface Awaitable {
 
 
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitAll(
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
 		Stream<Entry<T>> awaitableEntries
 	) throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, continueOnInterrupt, awaitableEntries.iterator());
+		return awaitAll(timeout, unit, continueOnInterrupt, awaitableEntries.iterator());
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitAll(
 		long timeoutMillis,
 		boolean continueOnInterrupt,
 		Stream<Entry<T>> awaitableEntries
 	) throws AwaitInterruptedException {
-		return awaitMultiple(
+		return awaitAll(
 			timeoutMillis,
 			MILLISECONDS,
 			continueOnInterrupt,
@@ -381,29 +381,29 @@ public interface Awaitable {
 		);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Stream<Entry<T>> awaitableEntries)
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitAll(long timeout, TimeUnit unit, Stream<Entry<T>> awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, true, awaitableEntries.iterator());
+		return awaitAll(timeout, unit, true, awaitableEntries.iterator());
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static <T> List<T> awaitMultiple(long timeoutMillis, Stream<Entry<T>> awaitableEntries)
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static <T> List<T> awaitAll(long timeoutMillis, Stream<Entry<T>> awaitableEntries)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, MILLISECONDS, true, awaitableEntries.iterator());
+		return awaitAll(timeoutMillis, MILLISECONDS, true, awaitableEntries.iterator());
 	}
 
 
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static boolean awaitMultiple(
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
 		Awaitable... operations
 	) throws AwaitInterruptedException {
 		return (
-			awaitMultiple(
+			awaitAll(
 				timeout,
 				unit,
 				continueOnInterrupt,
@@ -414,32 +414,32 @@ public interface Awaitable {
 		);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static boolean awaitMultiple(
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(
 		long timeoutMillis,
 		boolean continueOnInterrupt,
 		Awaitable... operations
 	) throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, MILLISECONDS, continueOnInterrupt, operations);
+		return awaitAll(timeoutMillis, MILLISECONDS, continueOnInterrupt, operations);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static boolean awaitMultiple(
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(
 		long timeout,
 		TimeUnit unit,
 		boolean continueOnInterrupt,
 		Awaitable.WithUnit... operations
 	) throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, continueOnInterrupt, (Awaitable[]) operations);
+		return awaitAll(timeout, unit, continueOnInterrupt, (Awaitable[]) operations);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
-	static boolean awaitMultiple(
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(
 		long timeoutMillis,
 		boolean continueOnInterrupt,
 		Awaitable.WithUnit... operations
 	) throws AwaitInterruptedException {
-		return awaitMultiple(
+		return awaitAll(
 			timeoutMillis,
 			MILLISECONDS,
 			continueOnInterrupt,
@@ -447,27 +447,184 @@ public interface Awaitable {
 		);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(long timeout, TimeUnit unit, Awaitable... operations)
+			throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, true, operations);
+	}
+
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(long timeoutMillis, Awaitable... operations)
+			throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, MILLISECONDS, true, operations);
+	}
+
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(long timeout, TimeUnit unit, Awaitable.WithUnit... operations)
+			throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, true, (Awaitable[]) operations);
+	}
+
+	/** See {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	static boolean awaitAll(long timeoutMillis, Awaitable.WithUnit... operations)
+			throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, MILLISECONDS, true, (Awaitable[]) operations);
+	}
+
+
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, boolean, Iterator)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Iterator<Entry<T>> awaitableEntries
+	) throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, continueOnInterrupt, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, boolean, Entry...)}. */
+	@Deprecated(forRemoval = true)
+	@SafeVarargs
+	static <T> List<T> awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Entry<T>... awaitableEntries
+	) throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, continueOnInterrupt, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, boolean, Entry...)}. */
+	@Deprecated(forRemoval = true)
+	@SafeVarargs
+	static <T> List<T> awaitMultiple(
+		long timeoutMillis,
+		boolean continueOnInterrupt,
+		Entry<T>... awaitableEntries
+	) throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, continueOnInterrupt, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, Entry...)}. */
+	@Deprecated(forRemoval = true)
+	@SafeVarargs
+	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Entry<T>... awaitableEntries)
+			throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, Entry...)}. */
+	@Deprecated(forRemoval = true)
+	@SafeVarargs
+	static <T> List<T> awaitMultiple(long timeoutMillis, Entry<T>... awaitableEntries)
+			throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, boolean, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Stream<Entry<T>> awaitableEntries
+	) throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, continueOnInterrupt, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, boolean, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(
+		long timeoutMillis,
+		boolean continueOnInterrupt,
+		Stream<Entry<T>> awaitableEntries
+	) throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, continueOnInterrupt, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(long timeout, TimeUnit unit, Stream<Entry<T>> awaitableEntries)
+			throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, Stream)}. */
+	@Deprecated(forRemoval = true)
+	static <T> List<T> awaitMultiple(long timeoutMillis, Stream<Entry<T>> awaitableEntries)
+			throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, awaitableEntries);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, boolean, Awaitable...)}. */
+	@Deprecated(forRemoval = true)
+	static boolean awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Awaitable... operations
+	) throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, continueOnInterrupt, operations);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, boolean, Awaitable...)}. */
+	@Deprecated(forRemoval = true)
+	static boolean awaitMultiple(
+		long timeoutMillis,
+		boolean continueOnInterrupt,
+		Awaitable... operations
+	) throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, continueOnInterrupt, operations);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, boolean, Awaitable.WithUnit...)}. */
+	@Deprecated(forRemoval = true)
+	static boolean awaitMultiple(
+		long timeout,
+		TimeUnit unit,
+		boolean continueOnInterrupt,
+		Awaitable.WithUnit... operations
+	) throws AwaitInterruptedException {
+		return awaitAll(timeout, unit, continueOnInterrupt, operations);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, boolean, Awaitable.WithUnit...)}. */
+	@Deprecated(forRemoval = true)
+	static boolean awaitMultiple(
+		long timeoutMillis,
+		boolean continueOnInterrupt,
+		Awaitable.WithUnit... operations
+	) throws AwaitInterruptedException {
+		return awaitAll(timeoutMillis, continueOnInterrupt, operations);
+	}
+
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, Awaitable...)}. */
+	@Deprecated(forRemoval = true)
 	static boolean awaitMultiple(long timeout, TimeUnit unit, Awaitable... operations)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, true, operations);
+		return awaitAll(timeout, unit, operations);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** @deprecated Use {@link #awaitAll(long, Awaitable...)}. */
+	@Deprecated(forRemoval = true)
 	static boolean awaitMultiple(long timeoutMillis, Awaitable... operations)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, MILLISECONDS, true, operations);
+		return awaitAll(timeoutMillis, operations);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** @deprecated Use {@link #awaitAll(long, TimeUnit, Awaitable.WithUnit...)}. */
+	@Deprecated(forRemoval = true)
 	static boolean awaitMultiple(long timeout, TimeUnit unit, Awaitable.WithUnit... operations)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeout, unit, true, (Awaitable[]) operations);
+		return awaitAll(timeout, unit, operations);
 	}
 
-	/** See {@link #awaitMultiple(long, TimeUnit, boolean, Iterator)}. */
+	/** @deprecated Use {@link #awaitAll(long, Awaitable.WithUnit...)}. */
+	@Deprecated(forRemoval = true)
 	static boolean awaitMultiple(long timeoutMillis, Awaitable.WithUnit... operations)
 			throws AwaitInterruptedException {
-		return awaitMultiple(timeoutMillis, MILLISECONDS, true, (Awaitable[]) operations);
+		return awaitAll(timeoutMillis, operations);
 	}
 }
