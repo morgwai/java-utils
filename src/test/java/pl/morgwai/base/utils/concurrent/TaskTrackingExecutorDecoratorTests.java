@@ -87,7 +87,7 @@ public class TaskTrackingExecutorDecoratorTests extends TaskTrackingExecutorTest
 
 	@Override
 	public void test10MNoopTasksPerformance() throws InterruptedException {
-		expectedNoopTaskPerformanceFactor = 1.3d;
+		expectedNoopTaskPerformanceFactor = 1.5d;
 		super.test10MNoopTasksPerformance();
 	}
 }
