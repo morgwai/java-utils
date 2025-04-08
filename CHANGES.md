@@ -1,5 +1,8 @@
 # Summaries of visible changes between releases
 
+### 5.3
+- `Awaitable.Entry`: make `final` fields also `public`.
+
 ### 5.2
 - `TaskTrackingExecutor`: add convenience `tryEnforceTermination(...)` method.
 - `Awaitable`: `awaitMultiple(...)`: ensure operations do not block after an interrupt, clear interrupt status when throwing an `AwaitInterruptedException`.

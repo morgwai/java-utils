@@ -139,8 +139,8 @@ public interface Awaitable {
 
 
 	/**
-	 * {@link #await(long) Awaits} up to {@code timeout} for all
-	 * {@link Entry#getOperation() operations} of {@code awaitableEntries} to complete.
+	 * {@link #await(long) Awaits} up to {@code timeout} for all {@link Entry#operation operations}
+	 * of {@code awaitableEntries} to complete.
 	 * The operations should be initiated before passing them to this function, so that they can all
 	 * run in the background: for example in case of
 	 * {@link ExecutorService#awaitTermination(long, TimeUnit) awaiting termination} of a bunch of
@@ -153,7 +153,7 @@ public interface Awaitable {
 	 * <p>
 	 * If any of the operations throws an {@link InterruptedException}, then an
 	 * {@link AwaitInterruptedException} will be eventually thrown by this method and all the
-	 * corresponding {@link Entry#getObject() objects} of such operations will be available via
+	 * corresponding {@link Entry#object objects} of such operations will be available via
 	 * {@link AwaitInterruptedException#getInterrupted()}.<br/>
 	 * If {@code continueOnInterrupt} is {@code false}, then an {@link AwaitInterruptedException} is
 	 * thrown immediately and the remaining {@link Entry Entries} will be available via
@@ -242,16 +242,16 @@ public interface Awaitable {
 
 
 	/**
-	 * Maps an {@link #getObject() object} to an {@link #getOperation() Awaitable operation} that
+	 * Maps an {@link #object object} to an {@link #operation Awaitable operation} that
 	 * one of {@link Awaitable#awaitMultiple(long, TimeUnit, boolean, Iterator) awaitMultiple(...)}
 	 * functions will {@link #await(long) await} for.
 	 */
 	class Entry<T> {
 
-		final T object;
+		public final T object;
 		public T getObject() { return object; }
 
-		final Awaitable operation;
+		public final Awaitable operation;
 		public Awaitable getOperation() { return operation; }
 
 		public Entry(T object, Awaitable operation) {
@@ -301,8 +301,6 @@ public interface Awaitable {
 			final Iterator<Entry<?>> tmp = (Iterator<Entry<?>>) (Iterator<?>) unexecuted;
 			this.unexecuted = tmp;
 		}
-
-		private static final long serialVersionUID = -5981514983898337530L;
 	}
 
 
