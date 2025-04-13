@@ -26,17 +26,36 @@ public class OrderedConcurrentOutputBufferTests {
 
 
 
+	static class Message {
+
+		final int bucket;
+		final int number;
+
+		public Message(int bucket, int number) {
+			this.bucket = bucket;
+			this.number = number;
+		}
+
+		@Override public String toString() {
+			return "msg-" + bucket + '-' + number;
+		}
+	}
+
 	static final Comparator<Message> messageComparator =
 			Comparator.comparingInt((Message msg) -> msg.bucket)
 				.thenComparingInt((msg) -> msg.number);
 
 
 
+	/** Test subject. */
 	OrderedConcurrentOutputBuffer<Message> buffer;
+
 	OutputStream<Message> outputStream;
-	List<Message> outputData;  // outputStream.write(message) will add message to this list
-	AtomicInteger closeCount;  // outputStream.close() will increase this counter
-	int[] bucketMessageNumbers;  // number of messages created by the bucket Thread at a given index
+	/** {@code outputStream.write(message)} will add {@code message} to this List. */
+	List<Message> outputData;
+	/** {@code outputStream.close()} will increase this counter. */
+	AtomicInteger closeCount;
+
 	Throwable asyncError;
 
 
@@ -67,6 +86,9 @@ public class OrderedConcurrentOutputBufferTests {
 	Message nextMessage(int bucketNumber) {
 		return new Message(bucketNumber, ++bucketMessageNumbers[bucketNumber - 1]);
 	}
+
+	/** Number of messages created by the bucket Thread at a given index. */
+	int[] bucketMessageNumbers;
 
 
 
@@ -412,23 +434,6 @@ public class OrderedConcurrentOutputBufferTests {
 			buffer.addBucket();
 			fail("adding a bucket after signaling no more should throw an IllegalStateException");
 		} catch (IllegalStateException ignored) {}
-	}
-
-
-
-	static class Message {
-
-		final int bucket;
-		final int number;
-
-		public Message(int bucket, int number) {
-			this.bucket = bucket;
-			this.number = number;
-		}
-
-		@Override public String toString() {
-			return "msg-" + bucket + '-' + number;
-		}
 	}
 
 
