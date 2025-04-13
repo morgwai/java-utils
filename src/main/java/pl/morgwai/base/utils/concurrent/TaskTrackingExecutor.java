@@ -264,8 +264,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		/** A decorator that tracks execution of its wrapped task. */
 		public class TrackableTask implements Runnable {
 
+			public final Runnable wrappedTask;
 			public Runnable getWrappedTask() { return wrappedTask; }
-			final Runnable wrappedTask;
 
 			protected TrackableTask(Runnable taskToWrap) {
 				wrappedTask = taskToWrap;

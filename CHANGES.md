@@ -1,7 +1,7 @@
 # Summaries of visible changes between releases
 
 ### 5.3
-- `Awaitable.Entry`: make `final` fields also `public`.
+- make some `final` also `public` in `Awaitable.Entry` and `TaskTrackingExecutor.TaskTrackingExecutorDecorator.HookableExecutor`.
 
 ### 5.2
 - `TaskTrackingExecutor`: add convenience `tryEnforceTermination(...)` method.
