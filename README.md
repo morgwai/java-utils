@@ -24,5 +24,8 @@ Adapter for a `Callable` that allows to pass it to `Executor.execute(Runnable)` 
 ### [Awaitable](https://javadoc.io/doc/pl.morgwai.base/java-utils/latest/pl/morgwai/base/utils/concurrent/Awaitable.html)
 Utilities to await for multiple timed blocking operations, such as `Thread.join(timeout)`, `ExecutorService.awaitTermination(...)` etc. See a usage example [here](https://github.com/morgwai/grpc-utils/blob/v6.0/sample/src/main/java/pl/morgwai/samples/grpc/utils/SqueezedServer.java#L488-L497).
 
+### [NamingThreadFactory](https://javadoc.io/doc/pl.morgwai.base/java-utils/latest/pl/morgwai/base/utils/concurrent/NamingThreadFactory.html)
+`ThreadFactory` that names new `Thread`s based on a constructor supplied generator/name.
+
 ### [NoCopyByteArrayOutputStream](https://javadoc.io/doc/pl.morgwai.base/java-utils/latest/pl/morgwai/base/utils/io/NoCopyByteArrayOutputStream.html)
 `ByteArrayOutputStream` that allows to directly access its underlying buffer (without copying) after the stream was closed.
