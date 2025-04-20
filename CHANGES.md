@@ -2,6 +2,7 @@
 
 ### 5.3
 - `Awaitable`: rename `awaitMultiple(...)` to `awaitAll(...)` (provide backward-compatibility aliases).
+- `Awaitable`: rename `Entry.object` to `subject` (provide backward-compatibility getter).
 - make some `final` also `public` in `Awaitable.Entry` and `TaskTrackingExecutor.TaskTrackingExecutorDecorator.HookableExecutor`.
 
 ### 5.2

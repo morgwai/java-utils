@@ -315,7 +315,7 @@ public class AwaitableTests {
 					assertTrue("not all tasks should be executed",
 							e.getUnexecuted().hasNext());
 					assertEquals("task-2 should not be executed",
-							2, unexecuted.next().getObject());
+							2, unexecuted.next().getSubject());
 					assertFalse("only 1 task should not be executed",
 							e.getUnexecuted().hasNext());
 					for (int i = 0; i < taskExecuted.length - 1; i++) {

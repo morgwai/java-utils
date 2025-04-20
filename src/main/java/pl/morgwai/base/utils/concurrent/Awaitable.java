@@ -153,7 +153,7 @@ public interface Awaitable {
 	 * <p>
 	 * If any of the operations throws an {@link InterruptedException}, then an
 	 * {@link AwaitInterruptedException} will be eventually thrown by this method and all the
-	 * corresponding {@link Entry#object objects} of such operations will be available via
+	 * corresponding {@link Entry#subject subjects} of such operations will be available via
 	 * {@link AwaitInterruptedException#getInterrupted()}.<br/>
 	 * If {@code continueOnInterrupt} is {@code false}, then an {@link AwaitInterruptedException} is
 	 * thrown immediately and the remaining {@link Entry Entries} will be available via
@@ -220,10 +220,10 @@ public interface Awaitable {
 					!awaitableEntry.operation.toAwaitableWithUnit()
 							.await(remainingNanos, NANOSECONDS)
 				) {
-					failedTasks.add(awaitableEntry.object);
+					failedTasks.add(awaitableEntry.subject);
 				}
 			} catch (InterruptedException e) {
-				interruptedTasks.add(awaitableEntry.object);
+				interruptedTasks.add(awaitableEntry.subject);
 				if ( !continueOnInterrupt) {
 					throw new AwaitInterruptedException(
 							failedTasks, interruptedTasks, awaitableEntries);
@@ -242,22 +242,26 @@ public interface Awaitable {
 
 
 	/**
-	 * Maps an {@link #object object} to an {@link #operation Awaitable operation} that
+	 * Maps a {@link #subject} to an {@link #operation Awaitable operation} that
 	 * {@link Awaitable#awaitAll(long, TimeUnit, boolean, Iterator)} function will
 	 * {@link #await(long) await} for.
 	 */
 	class Entry<T> {
 
-		public final T object;
-		public T getObject() { return object; }
+		public final T subject;
+		public T getSubject() { return subject; }
 
 		public final Awaitable operation;
 		public Awaitable getOperation() { return operation; }
 
-		public Entry(T object, Awaitable operation) {
-			this.object = object;
+		public Entry(T subject, Awaitable operation) {
+			this.subject = subject;
 			this.operation = operation;
 		}
+
+		/** @deprecated Use {@link #getSubject()}. */
+		@Deprecated(forRemoval = true)
+		public T getObject() { return subject; }
 	}
 
 	static <T> Entry<T> newEntry(T object, Awaitable operation) {
