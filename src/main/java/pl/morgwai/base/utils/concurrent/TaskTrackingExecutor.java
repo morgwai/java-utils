@@ -197,7 +197,8 @@ public interface TaskTrackingExecutor extends ExecutorService {
 			int threadPoolSize
 		) {
 			runningTasks = (threadPoolSize > 0)
-					? ConcurrentHashMap.newKeySet(threadPoolSize) : ConcurrentHashMap.newKeySet();
+				? ConcurrentHashMap.newKeySet(threadPoolSize)
+				: ConcurrentHashMap.newKeySet();
 			this.backingExecutor = executorToDecorate;
 			this.backingExecutorHookable = backingExecutorHookable;
 		}
@@ -217,11 +218,11 @@ public interface TaskTrackingExecutor extends ExecutorService {
 		@Override
 		public List<Runnable> shutdownNow() {
 			return backingExecutorHookable
-					? backingExecutor.shutdownNow()
-					: backingExecutor.shutdownNow().stream()
-						.map(TrackableTask.class::cast)
-						.map(TrackableTask::getWrappedTask)
-						.collect(toUnmodifiableList());
+				? backingExecutor.shutdownNow()
+				: backingExecutor.shutdownNow().stream()
+					.map(TrackableTask.class::cast)
+					.map(TrackableTask::getWrappedTask)
+					.collect(toUnmodifiableList());
 		}
 
 
