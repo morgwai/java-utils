@@ -568,7 +568,7 @@ public abstract class TaskTrackingExecutorTests {
 	 */
 	@BeforeClass
 	public static void setupLogging() {
-		addOrReplaceLoggingConfigProperties(Map.of(
+		addOrReplaceLogConfigProperties(Map.of(
 			LEVEL_SUFFIX, WARNING.toString(),
 			ConsoleHandler.class.getName() + FORMATTER_SUFFIX, JulFormatter.class.getName(),
 			ConsoleHandler.class.getName() + LEVEL_SUFFIX, FINEST.toString()
